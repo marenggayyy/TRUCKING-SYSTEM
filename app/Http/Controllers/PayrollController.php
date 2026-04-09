@@ -9,22 +9,56 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\PayrollPayment;
 use App\Models\AllowanceRange;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PayrollController extends Controller
 {
-    public function getLastOdometer($plate)
-{
-    $last = DB::table('expenses')
-        ->where('plate_number', $plate)
-        ->whereNotNull('odometer')
-        ->orderByDesc('date')
-        ->orderByDesc('time')
-        ->first();
+    public function downloadPDF($type, $id)
+    {
+        $weekStart = request('week_start');
+        $weekEnd = request('week_end');
 
-    return response()->json([
-        'odometer' => $last ? $last->odometer : null
-    ]);
-}
+        if ($type === 'driver') {
+            $data = $this->getDriverPayroll($id, $weekStart, $weekEnd);
+        } else {
+            $data = $this->getHelperPayroll($id, $weekStart, $weekEnd);
+        }
+
+        $data['person_type'] = $type;
+
+        // ✅ GET PAYMENT RECORD
+        $payment = PayrollPayment::where('person_type', $type)->where('person_id', $id)->whereDate('week_start', $weekStart)->whereDate('week_end', $weekEnd)->first();
+
+        // ✅ SAFE DEDUCTIONS
+        $deductions = [
+            'advanced' => $payment ? $payment->balance_advance : 0,
+            'sss' => $payment ? $payment->sss_deduction : 0,
+            'pagibig' => $payment ? $payment->pagibig_deduction : 0,
+            'philhealth' => $payment ? $payment->philhealth_deduction : 0,
+        ];
+
+        // ✅ SAFE NET PAY
+        $netPay = $payment ? $payment->final_amount : $data['payroll_total'];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.myfile', [
+            'p' => $data,
+            'weekStart' => $weekStart,
+            'weekEnd' => $weekEnd,
+            'deductions' => $deductions,
+            'netPay' => $netPay,
+        ]);
+
+        return $pdf->stream($data['name'] . '-payslip.pdf');
+    }
+
+    public function getLastOdometer($plate)
+    {
+        $last = DB::table('expenses')->where('plate_number', $plate)->whereNotNull('odometer')->orderByDesc('date')->orderByDesc('time')->first();
+
+        return response()->json([
+            'odometer' => $last ? $last->odometer : null,
+        ]);
+    }
 
     public function updateExpense(Request $request)
     {
@@ -366,6 +400,7 @@ class PayrollController extends Controller
             return [
                 'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
                 'location' => $t->destination->store_name ?? '-',
+                'rate' => $t->rate_snapshot,
                 'amount' => $amount,
                 'allowance' => $allowance,
                 'total_salary' => $totalSalary,
@@ -412,6 +447,7 @@ class PayrollController extends Controller
                 $rows->push([
                     'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
                     'location' => $t->destination->store_name ?? '-',
+                    'rate' => $t->rate_snapshot,
                     'amount' => $amount,
                     'allowance' => $allowance,
                     'total_salary' => $totalSalary,
@@ -645,7 +681,7 @@ class PayrollController extends Controller
             ],
         );
 
-        Mail::to($person->email)->send(new PayrollReadyMail($person, $rows, $amount, $weekStart, $weekEnd));
+        //Mail::to($person->email)->send(new PayrollReadyMail($person, $rows, $amount, $weekStart, $weekEnd));
 
         return back()->with('success', 'Payment/advance saved. This week will now appear in History.');
     }
@@ -658,164 +694,173 @@ class PayrollController extends Controller
     }
 
     public function history(Request $request)
-    {
-        $from = $request->query('from', now()->subWeeks(8)->startOfWeek(Carbon::MONDAY)->toDateString());
-        $to = $request->query('to', now()->endOfWeek(Carbon::SUNDAY)->toDateString());
+{
+    $from = $request->query('from', now()->subWeeks(8)->startOfWeek(Carbon::MONDAY)->toDateString());
+    $to = $request->query('to', now()->endOfWeek(Carbon::SUNDAY)->toDateString());
 
-        $filterStart = Carbon::parse($from)->startOfWeek(Carbon::MONDAY)->toDateString();
-        $filterEnd = Carbon::parse($to)->endOfWeek(Carbon::SUNDAY)->toDateString();
+    $filterStart = Carbon::parse($from)->startOfWeek(Carbon::MONDAY)->toDateString();
+    $filterEnd = Carbon::parse($to)->endOfWeek(Carbon::SUNDAY)->toDateString();
 
-        // Weeks that have at least 1 ledger row
-        // Weeks that have at least 1 ledger row
-        $ledgerWeeks = PayrollPersonLedger::query()->select('week_start', 'week_end')->whereDate('week_start', '>=', $filterStart)->whereDate('week_start', '<=', $filterEnd)->distinct()->orderByDesc('week_start')->get();
+    // ✅ SOURCE OF TRUTH (PAYMENTS)
+    $payments = PayrollPayment::whereDate('week_start', '>=', $filterStart)
+        ->whereDate('week_end', '<=', $filterEnd)
+        ->orderByDesc('week_start')
+        ->get();
 
-        $weeks = $ledgerWeeks->map(function ($wk) {
-            $weekStart = Carbon::parse($wk->week_start);
-            $weekEnd = Carbon::parse($wk->week_end);
+    $weeks = $payments
+        ->groupBy(fn($p) => $p->week_start . '|' . $p->week_end)
+        ->map(function ($group) {
 
-            // Only ledger rows for this week
-            $ledgers = PayrollPersonLedger::whereDate('week_start', $weekStart->toDateString())->whereDate('week_end', $weekEnd->toDateString())->get();
+            $weekStart = $group->first()->week_start;
+            $weekEnd = $group->first()->week_end;
 
-            // Trips for this week (needed to compute payroll totals per person)
-            $trips = DispatchTrip::with(['destination', 'truck', 'driver', 'helpers'])
-                ->where('status', 'Completed')
-                ->whereDate('dispatch_date', '>=', $weekStart->toDateString())
-                ->whereDate('dispatch_date', '<=', $weekEnd->toDateString())
-                ->orderBy('dispatch_date')
-                ->get();
+            // 🔥 REUSE SAME PAYROLL LOGIC
+            $buildRows = function ($personId, $type) use ($weekStart, $weekEnd) {
 
-            // Group trips by driver/helper for quick lookup
-            $driverTrips = $trips->groupBy('driver_id');
-            $helperTrips = [];
+                $trips = DispatchTrip::with(['destination', 'helpers'])
+                    ->where('status', 'Completed')
+                    ->whereDate('dispatch_date', '>=', $weekStart)
+                    ->whereDate('dispatch_date', '<=', $weekEnd)
+                    ->get();
 
-            foreach ($trips as $t) {
-                foreach ($t->helpers as $h) {
-                    if (!isset($helperTrips[$h->id])) {
-                        $helperTrips[$h->id] = [];
+                $rows = collect();
+
+                foreach ($trips as $t) {
+
+                    // DRIVER
+                    if ($type === 'driver' && $t->driver_id == $personId) {
+
+                        $rate = (float) ($t->rate_snapshot ?? 0);
+                        $allowance = $this->allowanceFromRate($rate);
+                        $amount = round($rate * 0.12, 2);
+
+                        $rows->push([
+                            'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
+                            'location' => $t->destination->store_name ?? '-',
+                            'rate' => $rate,
+                            'amount' => $amount,
+                            'allowance' => $allowance,
+                            'total_salary' => $amount + $allowance,
+                        ]);
                     }
 
-                    $helperTrips[$h->id][] = $t;
+                    // HELPER
+                    if ($type === 'helper') {
+                        foreach ($t->helpers as $h) {
+                            if ($h->id != $personId) continue;
+
+                            $rate = (float) ($t->rate_snapshot ?? 0);
+                            $allowance = $this->allowanceFromRate($rate);
+                            $amount = round($rate * 0.10, 2);
+
+                            $rows->push([
+                                'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
+                                'location' => $t->destination->store_name ?? '-',
+                                'rate' => $rate,
+                                'amount' => $amount,
+                                'allowance' => $allowance,
+                                'total_salary' => $amount + $allowance,
+                            ]);
+                        }
+                    }
                 }
-            }
 
-            $helperTrips = collect($helperTrips)->map(fn($items) => collect($items));
+                return $rows;
+            };
 
-            // Build ONLY drivers that have ledger
-            $driversPayroll = $ledgers
+            // =========================
+            // 🚛 DRIVERS
+            // =========================
+            $driversPayroll = $group
                 ->where('person_type', 'driver')
-                ->values()
-                ->map(function ($ledger) use ($driverTrips, $weekStart, $weekEnd) {
-                    $driverId = (int) $ledger->person_id;
-                    $group = $driverTrips->get($driverId, collect());
+                ->map(function ($p) use ($buildRows) {
 
-                    $name = optional($group->first()?->driver)->name ?? 'Unknown Driver';
+                    $rows = $buildRows($p->person_id, 'driver');
 
-                    $rows = $group->map(function ($t) {
-                        $rate = (float) ($t->rate_snapshot ?? 0);
+                    $advance = (float) ($p->balance_advance ?? 0);
+                    $sss = (float) ($p->sss_deduction ?? 0);
+                    $philhealth = (float) ($p->philhealth_deduction ?? 0);
+                    $pagibig = (float) ($p->pagibig_deduction ?? 0);
 
-                        $allowance = $this->allowanceFromRate($rate);
-
-                        $amount = round($rate * 0.12, 2);
-
-                        $totalSalary = round($amount + $allowance, 2);
-
-                        return [
-                            'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
-                            'location' => $t->destination->store_name ?? '-',
-                            'rate' => $rate,
-                            'amount' => $amount,
-                            'allowance' => $allowance,
-                            'total_salary' => $totalSalary,
-                        ];
-                    });
-
-                    $payrollTotal = round($rows->sum('total_salary'), 2);
-                    $paid = (float) ($ledger->paid_amount ?? 0);
-                    $advance = (float) ($ledger->advance_amount ?? 0);
-                    $balance = round($payrollTotal - $paid - $advance, 2);
-                    $alreadyPaid = PayrollPayment::where('person_type', 'driver')->where('person_id', $driverId)->whereDate('week_start', $weekStart)->whereDate('week_end', $weekEnd)->exists();
+                    $totalDeduction = $advance + $sss + $philhealth + $pagibig;
 
                     return [
-                        'person_id' => $driverId,
+                        'person_id' => $p->person_id,
                         'person_type' => 'driver',
-                        'name' => $name,
+                        'name' => optional(\App\Models\Driver::find($p->person_id))->name ?? 'Driver',
                         'rows' => $rows,
-                        'payroll_total' => $payrollTotal,
-                        'paid_amount' => $paid,
-                        'advance_amount' => $advance,
-                        'balance' => $balance,
-                        'status' => $alreadyPaid ? 'PAID' : 'UNPAID',
+
+                        'payroll_total' => $p->amount,
+                        'paid_amount' => $p->final_amount,
+
+                        // ✅ DEDUCTIONS
+                        'advance' => $advance,
+                        'sss' => $sss,
+                        'philhealth' => $philhealth,
+                        'pagibig' => $pagibig,
+                        'total_deduction' => $totalDeduction,
+                        'net_pay' => round(($p->amount ?? 0) - $totalDeduction, 2),
+
+                        'status' => 'PAID',
                     ];
                 })
-                // ->filter(fn($p) => $p['status'] === 'PAID')
                 ->values();
 
-            // Build ONLY helpers that have ledger
-            $helpersPayroll = $ledgers
+            // =========================
+            // 👷 HELPERS
+            // =========================
+            $helpersPayroll = $group
                 ->where('person_type', 'helper')
-                ->values()
-                ->map(function ($ledger) use ($helperTrips, $weekStart, $weekEnd) {
-                    $helperId = (int) $ledger->person_id;
-                    $group = $helperTrips->get($helperId, collect());
+                ->map(function ($p) use ($buildRows) {
 
-                    $name = \App\Models\Helper::find($helperId)?->name ?? 'Unknown Helper';
+                    $rows = $buildRows($p->person_id, 'helper');
 
-                    $rows = $group->map(function ($t) {
-                        $rate = (float) ($t->rate_snapshot ?? 0);
+                    $advance = (float) ($p->balance_advance ?? 0);
+                    $sss = (float) ($p->sss_deduction ?? 0);
+                    $philhealth = (float) ($p->philhealth_deduction ?? 0);
+                    $pagibig = (float) ($p->pagibig_deduction ?? 0);
 
-                        $allowance = $this->allowanceFromRate($rate);
-
-                        $amount = round($rate * 0.12, 2);
-
-                        $totalSalary = round($amount + $allowance, 2);
-
-                        return [
-                            'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
-                            'location' => $t->destination->store_name ?? '-',
-                            'rate' => $rate,
-                            'amount' => $amount,
-                            'allowance' => $allowance,
-                            'total_salary' => $totalSalary,
-                        ];
-                    });
-
-                    $payrollTotal = round($rows->sum('total_salary'), 2);
-                    $paid = (float) ($ledger->paid_amount ?? 0);
-                    $advance = (float) ($ledger->advance_amount ?? 0);
-                    $balance = round($payrollTotal - $paid - $advance, 2);
-                    $alreadyPaid = PayrollPayment::where('person_type', 'helper')->where('person_id', $helperId)->whereDate('week_start', $weekStart)->whereDate('week_end', $weekEnd)->exists();
+                    $totalDeduction = $advance + $sss + $philhealth + $pagibig;
 
                     return [
-                        'person_id' => $helperId,
+                        'person_id' => $p->person_id,
                         'person_type' => 'helper',
-                        'name' => $name,
+                        'name' => optional(\App\Models\Helper::find($p->person_id))->name ?? 'Helper',
                         'rows' => $rows,
-                        'payroll_total' => $payrollTotal,
-                        'paid_amount' => $paid,
-                        'advance_amount' => $advance,
-                        'balance' => $balance,
-                        'status' => $alreadyPaid ? 'PAID' : 'UNPAID',
+
+                        'payroll_total' => $p->amount,
+                        'paid_amount' => $p->final_amount,
+
+                        // ✅ DEDUCTIONS
+                        'advance' => $advance,
+                        'sss' => $sss,
+                        'philhealth' => $philhealth,
+                        'pagibig' => $pagibig,
+                        'total_deduction' => $totalDeduction,
+                        'net_pay' => round(($p->amount ?? 0) - $totalDeduction, 2),
+
+                        'status' => 'PAID',
                     ];
                 })
-                // ->filter(fn($p) => $p['status'] === 'PAID')
                 ->values();
 
-            $driversTotal = round($driversPayroll->sum('payroll_total'), 2);
-            $helpersTotal = round($helpersPayroll->sum('payroll_total'), 2);
+            $driversTotal = $driversPayroll->sum('paid_amount');
+            $helpersTotal = $helpersPayroll->sum('paid_amount');
 
             return [
-                'week_start' => $weekStart->toDateString(),
-                'week_end' => $weekEnd->toDateString(),
+                'week_start' => $weekStart,
+                'week_end' => $weekEnd,
                 'driversPayroll' => $driversPayroll,
                 'helpersPayroll' => $helpersPayroll,
                 'driversTotal' => $driversTotal,
                 'helpersTotal' => $helpersTotal,
-                'grandTotal' => round($driversTotal + $helpersTotal, 2),
+                'grandTotal' => $driversTotal + $helpersTotal,
             ];
-        });
+        })
+        ->values();
 
-        return view('owner.payroll.history', compact('from', 'to', 'weeks'));
-    }
+    return view('owner.payroll.history', compact('from', 'to', 'weeks'));
+}
 
     public function expenses(Request $request)
     {
@@ -844,44 +889,41 @@ class PayrollController extends Controller
         // 🔥 COMPUTE FUEL CONSUMPTION
         $grouped = $expenses->groupBy('plate_number');
 
-$finalExpenses = collect();
+        $finalExpenses = collect();
 
-foreach ($grouped as $plate => $items) {
-    $items = $items->sortBy('date')->values(); // ensure order
+        foreach ($grouped as $plate => $items) {
+            $items = $items->sortBy('date')->values(); // ensure order
 
-    foreach ($items as $index => $curr) {
-
-        if ($index == 0) {
-            // first record → walang previous
-            $curr->start_odometer = $curr->odometer;
-            $curr->distance = null;
-            $curr->km_per_liter = null;
-        } else {
-            $prev = $items[$index - 1];
-
-            if (!is_null($curr->odometer) && !is_null($prev->odometer) && $curr->liters > 0) {
-
-                $curr->start_odometer = $prev->odometer;
-
-                $distance = $curr->odometer - $prev->odometer;
-
-                if ($distance > 0) {
-                    $curr->distance = $distance;
-                    $curr->km_per_liter = round($distance / $curr->liters, 2);
-                } else {
+            foreach ($items as $index => $curr) {
+                if ($index == 0) {
+                    // first record → walang previous
+                    $curr->start_odometer = $curr->odometer;
                     $curr->distance = null;
                     $curr->km_per_liter = null;
+                } else {
+                    $prev = $items[$index - 1];
+
+                    if (!is_null($curr->odometer) && !is_null($prev->odometer) && $curr->liters > 0) {
+                        $curr->start_odometer = $prev->odometer;
+
+                        $distance = $curr->odometer - $prev->odometer;
+
+                        if ($distance > 0) {
+                            $curr->distance = $distance;
+                            $curr->km_per_liter = round($distance / $curr->liters, 2);
+                        } else {
+                            $curr->distance = null;
+                            $curr->km_per_liter = null;
+                        }
+                    } else {
+                        $curr->distance = null;
+                        $curr->km_per_liter = null;
+                    }
                 }
 
-            } else {
-                $curr->distance = null;
-                $curr->km_per_liter = null;
+                $finalExpenses->push($curr);
             }
         }
-
-        $finalExpenses->push($curr);
-    }
-}
 
         $totalDistance = 0;
         $totalLiters = 0;

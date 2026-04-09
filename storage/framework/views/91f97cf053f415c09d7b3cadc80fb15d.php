@@ -1,8 +1,8 @@
-@extends('layouts.owner')
 
-@section('title', 'Payroll History')
 
-@section('content')
+<?php $__env->startSection('title', 'Payroll History'); ?>
+
+<?php $__env->startSection('content'); ?>
     <div class="max-w-6xl mx-auto px-4 py-4">
 
         <div class="ui-hero p-3 p-lg-4 mb-3 mb-lg-4">
@@ -18,11 +18,11 @@
                 </div>
 
                 <div class="d-flex gap-2">
-                    <a href="{{ route('owner.payroll.dashboard') }}" class="btn btn-outline-secondary">
+                    <a href="<?php echo e(route('owner.payroll.dashboard')); ?>" class="btn btn-outline-secondary">
                         ← Dashboard
                     </a>
 
-                    <a href="{{ route('owner.payroll.index') }}" class="btn btn-outline-secondary">
+                    <a href="<?php echo e(route('owner.payroll.index')); ?>" class="btn btn-outline-secondary">
                         ← Payroll
                     </a>
                 </div>
@@ -31,7 +31,7 @@
 
         </div>
 
-        @php
+        <?php
             $driversTotal = collect($weeks)->sum('driversTotal');
             $helpersTotal = collect($weeks)->sum('helpersTotal');
             $grandTotal = collect($weeks)->sum('grandTotal');
@@ -39,10 +39,10 @@
             $driversCount = collect($weeks)->flatMap(fn($w) => $w['driversPayroll'])->unique('person_id')->count();
 
             $helpersCount = collect($weeks)->flatMap(fn($w) => $w['helpersPayroll'])->unique('person_id')->count();
-        @endphp
+        ?>
 
 
-        {{-- KPI CARDS --}}
+        
         <div class="row">
 
             <div class="col-12 col-md-4">
@@ -54,11 +54,12 @@
                         </div>
 
                         <div class="fw-bold fs-5 text-success">
-                            ₱ {{ number_format($driversTotal, 2) }}
+                            ₱ <?php echo e(number_format($driversTotal, 2)); ?>
+
                         </div>
 
                         <div class="small text-muted">
-                            {{ $driversCount }} Drivers
+                            <?php echo e($driversCount); ?> Drivers
                         </div>
 
                     </div>
@@ -74,11 +75,12 @@
                         </div>
 
                         <div class="fw-bold fs-5 text-primary">
-                            ₱ {{ number_format($helpersTotal, 2) }}
+                            ₱ <?php echo e(number_format($helpersTotal, 2)); ?>
+
                         </div>
 
                         <div class="small text-muted">
-                            {{ $helpersCount }} Helpers
+                            <?php echo e($helpersCount); ?> Helpers
                         </div>
 
                     </div>
@@ -94,11 +96,12 @@
                         </div>
 
                         <div class="fw-bold fs-5 text-warning">
-                            ₱ {{ number_format($grandTotal, 2) }}
+                            ₱ <?php echo e(number_format($grandTotal, 2)); ?>
+
                         </div>
 
                         <div class="small text-muted">
-                            {{ count($weeks) }} Payroll Weeks
+                            <?php echo e(count($weeks)); ?> Payroll Weeks
                         </div>
 
                     </div>
@@ -108,7 +111,7 @@
         </div>
 
 
-        {{-- PAYROLL WEEKS --}}
+        
         <div class="card border-0 shadow-sm mb-3">
 
             <div class="card-header bg-white">
@@ -127,10 +130,10 @@
 
                     <form method="GET" class="queue-filter">
 
-                        <input type="date" name="from" value="{{ request('from') }}"
+                        <input type="date" name="from" value="<?php echo e(request('from')); ?>"
                             class="form-control form-control-sm">
 
-                        <input type="date" name="to" value="{{ request('to') }}"
+                        <input type="date" name="to" value="<?php echo e(request('to')); ?>"
                             class="form-control form-control-sm">
 
                         <button class="btn btn-sm btn-primary">
@@ -146,37 +149,40 @@
 
             <div class="card-body">
 
-                @forelse($weeks as $wIndex => $w)
+                <?php $__empty_1 = true; $__currentLoopData = $weeks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $wIndex => $w): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
 
-                    {{-- WEEK TITLE --}}
+                    
                     <div class="fw-bold fs-5 mb-3 text-primary">
-                        {{ $w['week_start'] }} → {{ $w['week_end'] }}
+                        <?php echo e($w['week_start']); ?> → <?php echo e($w['week_end']); ?>
+
                     </div>
 
 
-                    {{-- TABS --}}
+                    
                     <ul
                         class="nav nav-pills d-flex flex-column flex-md-row gap-2 mb-3 align-items-start align-items-md-center">
 
                         <li class="nav-item">
                             <button class="nav-link active" data-bs-toggle="tab"
-                                data-bs-target="#week{{ $wIndex }}Drivers" type="button">
+                                data-bs-target="#week<?php echo e($wIndex); ?>Drivers" type="button">
 
                                 Drivers
                                 <span class="badge bg-light text-dark ms-1">
-                                    {{ count($w['driversPayroll']) }}
+                                    <?php echo e(count($w['driversPayroll'])); ?>
+
                                 </span>
 
                             </button>
                         </li>
 
                         <li class="nav-item">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#week{{ $wIndex }}Helpers"
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#week<?php echo e($wIndex); ?>Helpers"
                                 type="button">
 
                                 Helpers
                                 <span class="badge bg-light text-dark ms-1">
-                                    {{ count($w['helpersPayroll']) }}
+                                    <?php echo e(count($w['helpersPayroll'])); ?>
+
                                 </span>
 
                             </button>
@@ -187,11 +193,11 @@
 
                     <div class="tab-content">
 
-                        {{-- DRIVERS --}}
-                        <div class="tab-pane fade show active" id="week{{ $wIndex }}Drivers">
+                        
+                        <div class="tab-pane fade show active" id="week<?php echo e($wIndex); ?>Drivers">
 
-                            @forelse($w['driversPayroll'] as $p)
-                                @php
+                            <?php $__empty_2 = true; $__currentLoopData = $w['driversPayroll']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_2 = false; ?>
+                                <?php
                                     $status = $p['status'] ?? 'UNPAID';
 
                                     $badge = match ($status) {
@@ -201,7 +207,7 @@
                                         'NO TRIPS' => 'secondary',
                                         default => 'danger',
                                     };
-                                @endphp
+                                ?>
 
 
                                 <div class="card border mb-3">
@@ -212,23 +218,25 @@
 
                                             <!-- LEFT -->
                                             <div class="fw-bold text-info">
-                                                {{ $p['name'] ?? 'Unknown Driver' }}
+                                                <?php echo e($p['name'] ?? 'Unknown Driver'); ?>
+
                                                 <span class="text-muted small ms-1">Driver</span>
                                             </div>
 
                                             <!-- RIGHT -->
                                             <div class="d-flex align-items-center gap-2">
 
-                                                <span class="badge bg-{{ $badge }}">
-                                                    {{ $status }}
+                                                <span class="badge bg-<?php echo e($badge); ?>">
+                                                    <?php echo e($status); ?>
+
                                                 </span>
 
-                                                <a href="{{ route('owner.payroll.pdf', [
+                                                <a href="<?php echo e(route('owner.payroll.pdf', [
                                                     'type' => 'driver',
                                                     'id' => $p['person_id'],
                                                     'week_start' => $w['week_start'],
                                                     'week_end' => $w['week_end'],
-                                                ]) }}"
+                                                ])); ?>"
                                                     class="btn btn-sm btn-danger">
                                                     PDF
                                                 </a>
@@ -257,38 +265,41 @@
 
                                                 <tbody>
 
-                                                    @forelse($p['rows'] as $r)
+                                                    <?php $__empty_3 = true; $__currentLoopData = $p['rows']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $r): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_3 = false; ?>
                                                         <tr>
 
-                                                            <td class="text-center" data-label="Date">{{ $r['date'] }}
+                                                            <td class="text-center" data-label="Date"><?php echo e($r['date']); ?>
+
                                                             </td>
                                                             <td class="break-words" data-label="Destination">
-                                                                {{ $r['location'] }}</td>
+                                                                <?php echo e($r['location']); ?></td>
 
                                                             <td class="text-end whitespace-nowrap" data-label="Rate">
-                                                                {{ number_format($r['rate'], 2) }}</td>
+                                                                <?php echo e(number_format($r['rate'], 2)); ?></td>
 
                                                             <td class="text-end whitespace-nowrap" data-label="Amount">
-                                                                {{ number_format($r['amount'], 2) }}</td>
+                                                                <?php echo e(number_format($r['amount'], 2)); ?></td>
 
                                                             <td class="text-end whitespace-nowrap" data-label="Allowance">
-                                                                {{ number_format($r['allowance'], 2) }}
+                                                                <?php echo e(number_format($r['allowance'], 2)); ?>
+
                                                             </td>
 
                                                             <td class="text-end fw-bold" data-label="Totals">
-                                                                {{ number_format($r['total_salary'], 2) }}
+                                                                <?php echo e(number_format($r['total_salary'], 2)); ?>
+
                                                             </td>
 
                                                         </tr>
 
-                                                    @empty
+                                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_3): ?>
 
                                                         <tr>
                                                             <td colspan="5" class="text-center text-muted py-4">
                                                                 No trips.
                                                             </td>
                                                         </tr>
-                                                    @endforelse
+                                                    <?php endif; ?>
 
                                                 </tbody>
 
@@ -299,7 +310,8 @@
                                                     <tr>
                                                         <th colspan="5" class="text-end">TOTAL:</th>
                                                         <th class="text-end fw-bold">
-                                                            ₱ {{ number_format($p['payroll_total'], 2) }}
+                                                            ₱ <?php echo e(number_format($p['payroll_total'], 2)); ?>
+
                                                         </th>
                                                     </tr>
 
@@ -307,7 +319,8 @@
                                                     <tr>
                                                         <th colspan="5" class="text-end text-danger">TOTAL DEDUCTIONS:</th>
                                                         <th class="text-end text-danger">
-                                                            ₱ {{ number_format($p['total_deduction'], 2) }}
+                                                            ₱ <?php echo e(number_format($p['total_deduction'], 2)); ?>
+
                                                         </th>
                                                     </tr>
 
@@ -315,7 +328,8 @@
                                                     <tr>
                                                         <th colspan="5" class="text-end text-info">NET PAY:</th>
                                                         <th class="text-end text-info fw-bold">
-                                                            ₱ {{ number_format($p['net_pay'], 2) }}
+                                                            ₱ <?php echo e(number_format($p['net_pay'], 2)); ?>
+
                                                         </th>
                                                     </tr>
 
@@ -328,21 +342,21 @@
 
                                 </div>
 
-                            @empty
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_2): ?>
 
                                 <div class="alert alert-light border">
                                     No drivers this week.
                                 </div>
-                            @endforelse
+                            <?php endif; ?>
 
                         </div>
 
 
-                        {{-- HELPERS --}}
-                        <div class="tab-pane fade" id="week{{ $wIndex }}Helpers">
+                        
+                        <div class="tab-pane fade" id="week<?php echo e($wIndex); ?>Helpers">
 
-                            @forelse($w['helpersPayroll'] as $p)
-                                @php
+                            <?php $__empty_2 = true; $__currentLoopData = $w['helpersPayroll']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_2 = false; ?>
+                                <?php
                                     $status = $p['status'] ?? 'UNPAID';
 
                                     $badge = match ($status) {
@@ -352,7 +366,7 @@
                                         'NO TRIPS' => 'secondary',
                                         default => 'danger',
                                     };
-                                @endphp
+                                ?>
 
 
                                 <div class="card border mb-3">
@@ -363,23 +377,25 @@
 
                                             <!-- LEFT -->
                                             <div class="fw-bold text-info">
-                                                {{ $p['name'] ?? 'Unknown Driver' }}
+                                                <?php echo e($p['name'] ?? 'Unknown Driver'); ?>
+
                                                 <span class="text-muted small ms-1">Driver</span>
                                             </div>
 
                                             <!-- RIGHT -->
                                             <div class="d-flex align-items-center gap-2">
 
-                                                <span class="badge bg-{{ $badge }}">
-                                                    {{ $status }}
+                                                <span class="badge bg-<?php echo e($badge); ?>">
+                                                    <?php echo e($status); ?>
+
                                                 </span>
 
-                                                <a href="{{ route('owner.payroll.pdf', [
+                                                <a href="<?php echo e(route('owner.payroll.pdf', [
                                                     'type' => 'helper',
                                                     'id' => $p['person_id'],
                                                     'week_start' => $w['week_start'],
                                                     'week_end' => $w['week_end'],
-                                                ]) }}"
+                                                ])); ?>"
                                                     class="btn btn-sm btn-danger">
                                                     PDF
                                                 </a>
@@ -409,39 +425,42 @@
 
                                                 <tbody>
 
-                                                    @forelse($p['rows'] as $r)
+                                                    <?php $__empty_3 = true; $__currentLoopData = $p['rows']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $r): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_3 = false; ?>
                                                         <tr>
 
-                                                            <td class="text-center" data-label="Date">{{ $r['date'] }}
+                                                            <td class="text-center" data-label="Date"><?php echo e($r['date']); ?>
+
                                                             </td>
 
                                                             <td class="break-words" data-label="Destination">
-                                                                {{ $r['location'] }}</td>
+                                                                <?php echo e($r['location']); ?></td>
 
                                                             <td class="text-end whitespace-nowrap" data-label="Rate">
-                                                                {{ number_format($r['rate'], 2) }}</td>
+                                                                <?php echo e(number_format($r['rate'], 2)); ?></td>
 
                                                             <td class="text-end whitespace-nowrap" data-label="Amount">
-                                                                {{ number_format($r['amount'], 2) }}</td>
+                                                                <?php echo e(number_format($r['amount'], 2)); ?></td>
 
                                                             <td class="text-end whitespace-nowrap" data-label="Allowance">
-                                                                {{ number_format($r['allowance'], 2) }}
+                                                                <?php echo e(number_format($r['allowance'], 2)); ?>
+
                                                             </td>
 
                                                             <td class="text-end fw-bold" data-label="Totals">
-                                                                {{ number_format($r['total_salary'], 2) }}
+                                                                <?php echo e(number_format($r['total_salary'], 2)); ?>
+
                                                             </td>
 
                                                         </tr>
 
-                                                    @empty
+                                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_3): ?>
 
                                                         <tr>
                                                             <td colspan="5" class="text-center text-muted py-4">
                                                                 No trips recorded this week.
                                                             </td>
                                                         </tr>
-                                                    @endforelse
+                                                    <?php endif; ?>
 
                                                 </tbody>
 
@@ -452,7 +471,8 @@
                                                     <tr>
                                                         <th colspan="5" class="text-end">TOTAL:</th>
                                                         <th class="text-end fw-bold">
-                                                            ₱ {{ number_format($p['payroll_total'], 2) }}
+                                                            ₱ <?php echo e(number_format($p['payroll_total'], 2)); ?>
+
                                                         </th>
                                                     </tr>
 
@@ -460,7 +480,8 @@
                                                     <tr>
                                                         <th colspan="5" class="text-end text-danger"> TOTAL DEDUCTIONS:</th>
                                                         <th class="text-end text-danger">
-                                                            ₱ {{ number_format($p['total_deduction'], 2) }}
+                                                            ₱ <?php echo e(number_format($p['total_deduction'], 2)); ?>
+
                                                         </th>
                                                     </tr>
 
@@ -468,7 +489,8 @@
                                                     <tr>
                                                         <th colspan="5" class="text-end text-info">NET PAY:</th>
                                                         <th class="text-end text-info fw-bold">
-                                                            ₱ {{ number_format($p['net_pay'], 2) }}
+                                                            ₱ <?php echo e(number_format($p['net_pay'], 2)); ?>
+
                                                         </th>
                                                     </tr>
 
@@ -482,12 +504,12 @@
 
                                 </div>
 
-                            @empty
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_2): ?>
 
                                 <div class="alert alert-light border">
                                     No helpers this week.
                                 </div>
-                            @endforelse
+                            <?php endif; ?>
 
                         </div>
 
@@ -495,22 +517,22 @@
 
                     <hr class="my-4">
 
-                @empty
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
 
                     <div class="alert alert-light border">
                         No processed weeks found in this range.
                     </div>
 
-                @endforelse
+                <?php endif; ?>
 
             </div>
 
         </div>
 
     </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('styles')
+<?php $__env->startPush('styles'); ?>
     <style>
         .payroll-table-history {
             width: 100%;
@@ -1326,4 +1348,6 @@
 
         }
     </style>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.owner', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\HF-PC\Downloads\last zip\laravel_app\resources\views/owner/payroll/history.blade.php ENDPATH**/ ?>

@@ -6,11 +6,13 @@ use Illuminate\Http\Request;
 use App\Models\PayrollPayment;
 use App\Models\DispatchTrip;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class PayrollPaymentController extends Controller
 {
     public function store(Request $request)
     {
+
         $data = $request->validate([
             'person_type' => 'required|in:driver,helper',
             'person_id' => 'required|integer',
@@ -38,41 +40,56 @@ class PayrollPaymentController extends Controller
             $totalDeductions = $sss + $philhealth + $pagibig;
 
             $finalAmount = $data['amount'] + $bonus - $advance - $totalDeductions;
-
-            PayrollPayment::create([
+            $payment = PayrollPayment::create([
                 'person_type' => $data['person_type'],
                 'person_id' => $data['person_id'],
                 'week_start' => $data['week_start'],
                 'week_end' => $data['week_end'],
                 'total_trips' => $data['total_trips'],
 
-                // original
                 'amount' => $data['amount'],
-
-                // adjustments
                 'bonus' => $bonus,
                 'balance_advance' => $advance,
 
-                // deductions (NEW)
                 'sss_deduction' => $sss,
                 'philhealth_deduction' => $philhealth,
                 'pagibig_deduction' => $pagibig,
 
-                // final computed (VERY IMPORTANT)
                 'final_amount' => $finalAmount,
 
                 'payment_mode' => $data['payment_mode'],
                 'transaction_id' => $data['transaction_id'] ?? null,
-                'released_by' => auth()->id(),
+                'released_by' => Auth::id(),
                 'paid_at' => now(),
             ]);
 
-            $trips = DispatchTrip::with(['helpers', 'driver'])
+            $trips = DispatchTrip::with(['helpers'])
                 ->where('added_to_payroll', true)
                 ->whereBetween('dispatch_date', [$data['week_start'], $data['week_end']])
                 ->get();
 
             foreach ($trips as $trip) {
+                // DRIVER
+                if ($data['person_type'] === 'driver' && $trip->driver_id == $data['person_id']) {
+                    DB::table('payroll_payment_trips')->insert([
+                        'payroll_payment_id' => $payment->id,
+                        'dispatch_trip_id' => $trip->id,
+                    ]);
+                }
+
+                // HELPER
+                if ($data['person_type'] === 'helper') {
+                    foreach ($trip->helpers as $h) {
+                        if ($h->id == $data['person_id']) {
+                            DB::table('payroll_payment_trips')->insert([
+                                'payroll_payment_id' => $payment->id,
+                                'dispatch_trip_id' => $trip->id,
+                            ]);
+                        }
+                    }
+                }
+
+                // update status
                 $this->updateTripPaymentStatus($trip);
             }
         });

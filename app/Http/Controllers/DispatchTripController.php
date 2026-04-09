@@ -357,6 +357,7 @@ END
         return back()->with('error', 'Only completed or cancelled trips can be deleted.');
     }
 
+    $trip->delete();
     return back()->with('success', 'Trip deleted.');
 }
 
