@@ -345,21 +345,52 @@ END
     }
 
     public function destroy($dispatch_trip_id)
-{
-    if (!in_array(auth()->user()->role, ['owner', 'it'])) {
-        abort(403);
+    {
+        if (!in_array(auth()->user()->role, ['owner', 'it'])) {
+            abort(403);
+        }
+
+        $trip = DispatchTrip::with(['truck', 'driver', 'helpers'])->findOrFail($dispatch_trip_id);
+
+        DB::transaction(function () use ($trip) {
+            // ✅ IF naka on_trip (Dispatched), ibalik sila sa available
+            if ($trip->status === 'Dispatched') {
+                // 🚚 Truck
+                if ($trip->truck && $trip->truck->status === 'on_trip') {
+                    $trip->truck->update(['status' => 'active']);
+                }
+
+                // 👤 Driver
+                if ($trip->driver) {
+                    if (Schema::hasColumn($trip->driver->getTable(), 'availability_status')) {
+                        $trip->driver->update([
+                            'availability_status' => 'available',
+                            'status' => 'active',
+                        ]);
+                    } else {
+                        $trip->driver->update(['status' => 'active']);
+                    }
+                }
+
+                // 👷 Helpers
+                foreach ($trip->helpers as $h) {
+                    if (Schema::hasColumn($h->getTable(), 'availability_status')) {
+                        $h->update([
+                            'availability_status' => 'available',
+                            'status' => 'active',
+                        ]);
+                    } else {
+                        $h->update(['status' => 'active']);
+                    }
+                }
+            }
+
+            // ✅ DELETE TRIP
+            $trip->delete();
+        });
+
+        return back()->with('success', 'Trip deleted and resources released.');
     }
-
-    $trip = DispatchTrip::findOrFail($dispatch_trip_id);
-
-    // ✅ allow deleting completed/cancelled
-    if (!in_array($trip->status, ['Completed', 'Cancelled'])) {
-        return back()->with('error', 'Only completed or cancelled trips can be deleted.');
-    }
-
-    $trip->delete();
-    return back()->with('success', 'Trip deleted.');
-}
 
     public function toggleBilling(Request $request, $dispatch_trip_id)
     {

@@ -46,15 +46,13 @@ Route::middleware(['auth', 'role:owner,it'])
     ->prefix('owner')
     ->name('owner.')
     ->group(function () {
-
         // USERS
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        Route::delete('/trips/{id}', [DispatchTripController::class, 'destroy'])
-            ->name('trips.destroy');
+        Route::delete('/trips/{id}', [DispatchTripController::class, 'destroy'])->name('trips.destroy');
 
         // 🔴 INCOME REPORTS (RESTRICTED)
         Route::get('/users/reports', [UserController::class, 'reports'])->name('users.reports');
@@ -73,7 +71,6 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
     ->prefix('owner')
     ->name('owner.')
     ->group(function () {
-
         // DESTINATIONS
         Route::get('/destinations', [DestinationController::class, 'index'])->name('destinations.index');
         Route::post('/destinations', [DestinationController::class, 'store'])->name('destinations.store');
@@ -108,7 +105,6 @@ Route::middleware(['auth', 'role:owner,it,admin'])
     ->prefix('owner')
     ->name('owner.')
     ->group(function () {
-
         Route::get('/trips', [DispatchTripController::class, 'index'])->name('trips.index');
         Route::post('/trips', [DispatchTripController::class, 'store'])->name('trips.store');
 
@@ -133,7 +129,6 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
     ->prefix('owner')
     ->name('owner.')
     ->group(function () {
-
         Route::get('/payroll/expenses/last-odometer/{plate}', [PayrollController::class, 'getLastOdometer']);
         Route::delete('/payroll/expenses/{id}', [PayrollController::class, 'deleteExpense']);
 
@@ -146,12 +141,11 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
         Route::get('/billing', [PayrollController::class, 'billing'])->name('payroll.billing');
         Route::get('/billing/history', [PayrollController::class, 'billingHistory'])->name('billing.history');
         // ✅ ADD THIS
-        Route::get('/payroll/pdf/{id}', [PayrollController::class, 'generateIndividualPDF'])
-            ->name('payroll.pdf.individual');
+        Route::get('/payroll/pdf/{id}', [PayrollController::class, 'generateIndividualPDF'])->name('payroll.pdf.individual');
 
-        Route::get('/payroll/pdf/{type}/{id}', [PayrollController::class, 'downloadPDF'])
-            ->name('payroll.pdf');
+        Route::get('/payroll/pdf/{type}/{id}', [PayrollController::class, 'downloadPDF'])->name('payroll.pdf');
 
+        Route::delete('/payroll/payment/{id}', [PayrollController::class, 'destroy'])->name('payroll.delete-payment');
 
         Route::post('/trips/{id}/add-to-payroll', [PayrollController::class, 'addToPayroll'])->name('trips.addToPayroll');
         Route::put('/trips/{id}/billing-update', [PayrollController::class, 'updateBilling'])->name('trips.updateBilling');
@@ -177,7 +171,6 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
     ->prefix('owner')
     ->name('owner.')
     ->group(function () {
-
         Route::get('/reports/maintenance', [MaintenanceController::class, 'index'])->name('reports.maintenance');
         Route::post('/maintenance/save', [MaintenanceController::class, 'save'])->name('maintenance.save');
     });
@@ -192,6 +185,8 @@ Route::post('/logout', function () {
     request()->session()->invalidate();
     request()->session()->regenerateToken();
     return redirect('/');
-})->middleware('auth')->name('logout');
+})
+    ->middleware('auth')
+    ->name('logout');
 
 require __DIR__ . '/auth.php';

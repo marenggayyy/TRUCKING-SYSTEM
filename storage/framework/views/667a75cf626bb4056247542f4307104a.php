@@ -6,62 +6,130 @@
         body {
             font-family: DejaVu Sans, sans-serif;
             font-size: 12px;
+            font-weight: 400;
+            color: #222;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 10px;
+            border-bottom: 2px solid #4f46e5;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
         }
 
         .title {
-            font-size: 18px;
+            font-size: 22px;
             font-weight: bold;
+            color: #4f46e5;
+            letter-spacing: 1px;
         }
 
         .company {
             font-size: 12px;
+            color: #555;
         }
 
-        .info-table {
+        .info-box {
             width: 100%;
-            margin-top: 10px;
-            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            border-radius: 6px;
         }
 
-        .info-table td {
-            padding: 4px;
+        .info-box td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-box tr:last-child td {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            background: #f4f4ff;
+            color: #4f46e5;
+            padding: 8px 10px;
+            border-left: 4px solid #4f46e5;
+            margin-bottom: 8px;
         }
 
         .main-table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 20px;
         }
 
-        .main-table th,
+        .main-table th {
+            background: #4f46e5;
+            color: white;
+            padding: 8px;
+            font-size: 11px;
+        }
+
         .main-table td {
-            border: 1px solid #000;
-            padding: 5px;
+            border: 1px solid #ddd;
+            padding: 7px;
             text-align: center;
         }
 
-        .section-title {
-            margin-top: 10px;
-            font-weight: bold;
+        .summary-table {
+            width: 48%;
+            margin-left: auto;
+            border-collapse: collapse;
+            table-layout: fixed;
         }
 
-        .totals {
-            margin-top: 10px;
+        .summary-table td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+        }
+
+        .summary-table td:first-child {
+            width: 65%;
+        }
+
+        .summary-table td:last-child {
+            width: 35%;
             text-align: right;
+            white-space: nowrap;
+        }
+
+        .summary-label {
+            font-weight: bold;
+            background: #fafafa;
+        }
+
+        .net-pay {
+            background: #e8f5e9;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1b5e20;
         }
 
         .signature {
-            margin-top: 40px;
+            margin-top: 50px;
             width: 100%;
         }
 
         .signature td {
+            width: 50%;
             text-align: center;
-            padding-top: 30px;
+            padding-top: 35px;
+            font-size: 11px;
+        }
+
+        .line {
+            border-top: 1px solid #000;
+            width: 80%;
+            margin: 0 auto 6px auto;
+        }
+
+        .section-title,
+        .main-table th,
+        .summary-label {
+            font-weight: 600;
         }
     </style>
 </head>
@@ -71,10 +139,15 @@
     <div class="header">
         <div class="title">PAYSLIP</div>
         <div class="company">Your Company Name</div>
-        <div class="company">Payroll Period: <?php echo e($weekStart); ?> - <?php echo e($weekEnd); ?></div>
+        <div class="company">
+            Payroll Period:
+            <?php echo e(\Carbon\Carbon::parse($weekStart)->format('M d')); ?> –
+            <?php echo e(\Carbon\Carbon::parse($weekEnd)->format('M d, Y')); ?>
+
+        </div>
     </div>
 
-    <table class="info-table">
+    <table class="info-box">
         <tr>
             <td><strong>Name:</strong> <?php echo e($p['name']); ?></td>
             <td>
@@ -83,9 +156,13 @@
 
             </td>
         </tr>
+        <tr>
+            <td><strong>Total Trips:</strong> <?php echo e(count($p['rows'])); ?></td>
+            <td><strong>Generated:</strong> <?php echo e(now()->format('M d, Y h:i A')); ?></td>
+        </tr>
     </table>
 
-    <div class="section-title">INCOME</div>
+    <div class="section-title">Payroll Breakdown</div>
 
     <table class="main-table">
         <tr>
@@ -104,41 +181,40 @@
                 <td><?php echo e(number_format($r['rate'] ?? 0, 2)); ?></td>
                 <td><?php echo e(number_format($r['amount'] ?? 0, 2)); ?></td>
                 <td><?php echo e(number_format($r['allowance'] ?? 0, 2)); ?></td>
-                <td><?php echo e(number_format($r['total_salary'] ?? 0, 2)); ?></td>
+                <td><strong><?php echo e(number_format($r['total_salary'] ?? 0, 2)); ?></strong></td>
             </tr>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-
-        <tr>
-            <td colspan="5"><strong>TOTAL INCOME</strong></td>
-            <td><strong>₱ <?php echo e(number_format($p['payroll_total'], 2)); ?></strong></td>
-        </tr>
     </table>
 
-    <div class="section-title">DEDUCTIONS</div>
-
-    <table class="main-table">
+    <table class="summary-table">
         <tr>
-            <th>ADVANCE</th>
-            <th>SSS</th>
-            <th>PAG-IBIG</th>
-            <th>PHILHEALTH</th>
+            <td class="summary-label">Total Income</td>
+            <td>₱ <?php echo e(number_format($p['payroll_total'], 2)); ?></td>
         </tr>
         <tr>
-            <td><?php echo e(number_format($deductions['advanced'], 2)); ?></td>
-            <td><?php echo e(number_format($deductions['sss'], 2)); ?></td>
-            <td><?php echo e(number_format($deductions['pagibig'], 2)); ?></td>
-            <td><?php echo e(number_format($deductions['philhealth'], 2)); ?></td>
+            <td class="summary-label">Advance Deduction</td>
+            <td>₱ <?php echo e(number_format($p['advance'] ?? 0, 2)); ?></td>
+        </tr>
+        <tr>
+            <td class="summary-label">Remaining Advance Balance</td>
+            <td>₱ <?php echo e(number_format($p['balance_advance_remaining'] ?? 0, 2)); ?></td>
+        </tr>
+        <tr class="net-pay">
+            <td>NET PAY</td>
+            <td>₱ <?php echo e(number_format($netPay, 2)); ?></td>
         </tr>
     </table>
-
-    <div class="totals">
-        <p><strong>NET PAY: ₱ <?php echo e(number_format($netPay, 2)); ?></strong></p>
-    </div>
 
     <table class="signature">
         <tr>
-            <td>_________________________<br>Employer Signature</td>
-            <td>_________________________<br>Employee Signature</td>
+            <td>
+                <div class="line"></div>
+                Employer Signature
+            </td>
+            <td>
+                <div class="line"></div>
+                Employee Signature
+            </td>
         </tr>
     </table>
 

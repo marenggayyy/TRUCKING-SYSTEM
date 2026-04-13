@@ -48,7 +48,7 @@
 
                         {{-- ✅ TRIP HISTORY BUTTON --}}
                         <a href="{{ route('owner.trips.history') }}" class="btn btn-outline-dark ui-btn-equal">
-                            <i class="bi bi-clock-history me-1"></i> History
+                            <i class="bi bi-clock-history me-1"></i>
                         </a>
 
                         {{-- FILTER --}}
@@ -207,44 +207,47 @@
 
 
                                     {{-- ACTION BUTTONS --}}
-<div class="trip-actions mt-0">
+                                    <div class="trip-actions mt-0">
 
-    <div class="d-flex gap-2">
+                                        <div class="d-flex gap-2">
 
-        {{-- EDIT BUTTON --}}
-        <button class="btn btn-outline-secondary btn-sm"
-            data-bs-toggle="modal"
-            data-bs-target="#editBillingModal-{{ $t->id }}">
-            <i class="bi bi-pencil"></i>
-        </button>
+                                            {{-- EDIT BUTTON --}}
+                                            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
+                                                data-bs-target="#editBillingModal-{{ $t->id }}">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
 
-        {{-- MARK AS BILLED --}}
-        @if (($t->billing_status ?? 'Unbilled') !== 'Billed')
+                                            {{-- DELETE BUTTON --}}
+                                            <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal"
+                                                data-bs-target="#confirmDelete-{{ $t->id }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
 
-            @if (!$t->check_release_date)
-                <button class="btn btn-secondary btn-sm flex-grow-1" disabled>
-                    Complete Billing First
-                </button>
-            @else
-                <button class="btn btn-success btn-sm flex-grow-1"
-                    data-bs-toggle="modal"
-                    data-bs-target="#billTripModal-{{ $t->id }}">
-                    Mark as Billed
-                </button>
-            @endif
+                                            {{-- MARK AS BILLED --}}
+                                            @if (($t->billing_status ?? 'Unbilled') !== 'Billed')
+                                                @if (!$t->check_release_date)
+                                                    <button class="btn btn-secondary btn-sm flex-grow-1" disabled>
+                                                        Complete Billing First
+                                                    </button>
+                                                @else
+                                                    <button class="btn btn-success btn-sm flex-grow-1"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#billTripModal-{{ $t->id }}">
+                                                        Mark as Billed
+                                                    </button>
+                                                @endif
+                                            @endif
 
-        @endif
+                                        </div>
 
-    </div>
+                                        {{-- ⚠️ WARNING MESSAGE --}}
+                                        @if (($t->billing_status ?? 'Unbilled') !== 'Billed' && !$t->check_release_date)
+                                            <small class="text-danger d-block mt-1">
+                                                Set check release date first
+                                            </small>
+                                        @endif
 
-    {{-- ⚠️ WARNING MESSAGE --}}
-    @if (($t->billing_status ?? 'Unbilled') !== 'Billed' && !$t->check_release_date)
-        <small class="text-danger d-block mt-1">
-            Set check release date first
-        </small>
-    @endif
-
-</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -273,7 +276,52 @@
 
         </div>
 
+        @foreach ($trips as $t)
+            <div class="modal fade" id="confirmDelete-{{ $t->id }}" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
 
+                        <div class="modal-header">
+                            <h6 class="modal-title text-danger">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Delete Trip
+                            </h6>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            Are you sure you want to delete this trip?
+
+                            <div class="mt-2">
+                                <strong>{{ $t->trip_ticket_no }}</strong>
+                            </div>
+
+                            <div class="text-muted small mt-2">
+                                This will also release resources if needed.
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+
+                            <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                Cancel
+                            </button>
+
+                            <form method="POST" action="{{ route('owner.trips.destroy', $t->id) }}">
+                                @csrf
+                                @method('DELETE')
+
+                                <button type="submit" class="btn btn-danger">
+                                    Yes, Delete
+                                </button>
+                            </form>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        @endforeach
         {{-- Billing Modals --}}
         @foreach ($trips as $t)
             <div class="modal fade" id="billTripModal-{{ $t->id }}" tabindex="-1">

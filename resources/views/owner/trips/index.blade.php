@@ -335,33 +335,51 @@
         </div>
 
         {{-- Delete All Confirm Modal --}}
-        <div class="modal fade" id="deleteAllTripsModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header">
-                        <h6 class="modal-title">Delete All Trips</h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        Are you sure you want to <strong>delete ALL trips</strong>?
-                        <div class="text-muted small mt-2">This cannot be undone.</div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary ui-pill-btn" data-bs-dismiss="modal">
-                            Cancel
-                        </button>
-                        <form method="POST" action="{{ route('owner.trips.destroyAll') }}">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger ui-pill-btn">
-                                Yes, Delete All
-                            </button>
-                        </form>
+
+        @foreach ($trips as $t)
+            @if (in_array($t->status, ['Draft', 'Assigned', 'Dispatched']))
+                <div class="modal fade" id="confirmDelete-{{ $t->id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow">
+
+                            <div class="modal-header">
+                                <h6 class="modal-title text-danger">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Delete Trip
+                                </h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                Are you sure you want to delete this trip?
+                                <div class="mt-2">
+                                    <strong>{{ $t->trip_ticket_no }}</strong>
+                                </div>
+                                <div class="text-muted small mt-2">
+                                    This action cannot be undone.
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                    Cancel
+                                </button>
+
+                                <form method="POST" action="{{ route('owner.trips.destroy', $t->id) }}">
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button type="submit" class="btn btn-danger">
+                                        Yes, Delete
+                                    </button>
+                                </form>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
+            @endif
+        @endforeach
         {{-- Confirm Delete Trip --}}
         @foreach ($trips as $t)
             @if ($t->status === 'Draft')
@@ -501,7 +519,8 @@
                                                 <select name="destination_id" class="form-select" required>
 
                                                     @foreach ($destinations as $d)
-                                                        <option value="{{ $d->id }}"  data-truck="{{ $d->truck_type }}"
+                                                        <option value="{{ $d->id }}"
+                                                            data-truck="{{ $d->truck_type }}"
                                                             {{ $d->id == $t->destination_id ? 'selected' : '' }}>
                                                             {{ strtoupper($d->truck_type) }} rate - {{ $d->store_code }} -
                                                             {{ $d->store_name }}
@@ -756,8 +775,8 @@
                                             {{ $t->destination->store_name ?? '-' }}
                                         </div>
 
-                                          {{-- STATUS CHIPS --}}
-                                        <div class="trip-status-row" >
+                                        {{-- STATUS CHIPS --}}
+                                        <div class="trip-status-row">
 
                                             <span class="trip-status delivery">
                                                 {{ $t->status }}
@@ -811,7 +830,7 @@
                                             </div>
                                         </div>
 
-                                      
+
                                         <hr class="my-3">
 
                                     </div> {{-- END small --}}
@@ -845,21 +864,44 @@
                                             @endif
 
                                             @if ($t->status == 'Assigned')
-                                                <button class="btn btn-primary btn-sm w-100" data-bs-toggle="modal"
-                                                    data-bs-target="#dispatchModal-{{ $t->id }}">
-                                                    Ready to Dispatch
-                                                </button>
+                                                <div class="d-flex gap-2">
+
+                                                    {{-- READY TO DISPATCH --}}
+                                                    <button class="btn btn-primary btn-sm w-100" data-bs-toggle="modal"
+                                                        data-bs-target="#dispatchModal-{{ $t->id }}">
+                                                        Ready to Dispatch
+                                                    </button>
+
+                                                    {{-- DELETE --}}
+                                                    <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal"
+                                                        data-bs-target="#confirmDelete-{{ $t->id }}">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+
+                                                </div>
                                             @endif
 
 
                                             @if ($t->status == 'Dispatched')
-                                                <form method="POST" action="{{ route('owner.trips.deliver', $t->id) }}"
-                                                    class="trip-dispatch">
-                                                    @csrf
-                                                    <button class="btn btn-success btn-sm w-100">
-                                                        Delivered
+                                                <div class="d-flex gap-2">
+
+                                                    {{-- DELIVERED --}}
+                                                    <form method="POST"
+                                                        action="{{ route('owner.trips.deliver', $t->id) }}"
+                                                        class="trip-dispatch w-100">
+                                                        @csrf
+                                                        <button class="btn btn-success btn-sm w-100">
+                                                            Delivered
+                                                        </button>
+                                                    </form>
+
+                                                    {{-- DELETE --}}
+                                                    <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal"
+                                                        data-bs-target="#confirmDelete-{{ $t->id }}">
+                                                        <i class="bi bi-trash"></i>
                                                     </button>
-                                                </form>
+
+                                                </div>
                                             @endif
 
                                         </div>
@@ -869,13 +911,13 @@
 
                             </div>
                         </div>
-                        @empty
+                    @empty
 
-                            <div class="text-center py-5">
-                                <div class="text-muted mb-2"><i class="bi bi-truck fs-3"></i></div>
-                                <div class="fw-semibold">No trips found</div>
-                                <div class="text-muted small">Create your first dispatch to get started.</div>
-                            </div>
+                        <div class="text-center py-5">
+                            <div class="text-muted mb-2"><i class="bi bi-truck fs-3"></i></div>
+                            <div class="fw-semibold">No trips found</div>
+                            <div class="text-muted small">Create your first dispatch to get started.</div>
+                        </div>
                     @endforelse
 
                 </div>
@@ -893,7 +935,7 @@
 
     {{-- ✅ Confirm Dispatch Modals (ONE ONLY, outside table/cards) --}}
     @foreach ($trips as $t)
-        @if ($t->status === 'Draft')
+        @if (in_array($t->status, ['Draft']))
             <div class="modal fade" id="confirmDispatch-{{ $t->id }}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content border-0 shadow">

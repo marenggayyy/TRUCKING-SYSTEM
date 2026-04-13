@@ -32,12 +32,8 @@ class PayrollController extends Controller
         // ✅ SAFE DEDUCTIONS
         $deductions = [
             'advanced' => $payment ? $payment->balance_advance : 0,
-            'sss' => $payment ? $payment->sss_deduction : 0,
-            'pagibig' => $payment ? $payment->pagibig_deduction : 0,
-            'philhealth' => $payment ? $payment->philhealth_deduction : 0,
         ];
 
-        // ✅ SAFE NET PAY
         $netPay = $payment ? $payment->final_amount : $data['payroll_total'];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.myfile', [
@@ -267,12 +263,15 @@ class PayrollController extends Controller
             $name = $items->first()['helper_name'];
 
             $amount = $items->sum(function ($row) {
-                $rate = $row['trip']->rate_snapshot ?? 0;
+                $trip = $row['trip'];
+                $rate = $trip->rate_snapshot ?? 0;
 
-                $salary = $rate * 0.1;
-                $allowance = $this->allowanceFromRate($rate);
+                $helperCount = max($trip->helpers->count(), 1);
 
-                return $salary + $allowance;
+                $salary = ($rate * 0.1) / $helperCount;
+                $allowance = $this->allowanceFromRate($rate) / $helperCount;
+
+                return round($salary + $allowance, 2);
             });
 
             $helperPaid = DB::table('payroll_payments')->where('person_type', 'helper')->where('person_id', $helperId)->whereDate('week_start', $from)->whereDate('week_end', $to)->exists();
@@ -438,9 +437,10 @@ class PayrollController extends Controller
 
                 $rate = (float) ($t->rate_snapshot ?? 0);
 
-                $allowance = $this->allowanceFromRate($rate);
+                $helperCount = max($t->helpers->count(), 1);
 
-                $amount = round($rate * 0.1, 2);
+                $amount = round(($rate * 0.1) / $helperCount, 2);
+                $allowance = round($this->allowanceFromRate($rate) / $helperCount, 2);
 
                 $totalSalary = round($amount + $allowance, 2);
 
@@ -479,24 +479,24 @@ class PayrollController extends Controller
         return $range ? (float) $range->allowance : 0;
     }
 
-    private function statusFromBalance(float $payrollTotal, float $paid, float $advance): string
-    {
-        if ($payrollTotal <= 0) {
-            return 'NO TRIPS';
-        }
+    // private function statusFromBalance(float $payrollTotal, float $paid, float $advance): string
+    // {
+    //     if ($payrollTotal <= 0) {
+    //         return 'NO TRIPS';
+    //     }
 
-        $balance = round($payrollTotal - $paid - $advance, 2);
+    //     $balance = round($payrollTotal - $paid - $advance, 2);
 
-        if ($balance <= 0 && $paid + $advance > 0) {
-            return $balance < 0 ? 'OVERPAID' : 'PAID';
-        }
+    //     if ($balance <= 0 && $paid + $advance > 0) {
+    //         return $balance < 0 ? 'OVERPAID' : 'PAID';
+    //     }
 
-        if ($paid + $advance > 0) {
-            return 'PARTIAL';
-        }
+    //     if ($paid + $advance > 0) {
+    //         return 'PARTIAL';
+    //     }
 
-        return 'UNPAID';
-    }
+    //     return 'UNPAID';
+    // }
 
     private function buildKey(string $type, int $id): string
     {
@@ -555,7 +555,7 @@ class PayrollController extends Controller
                 $ledger = $ledgers->get($this->buildKey('driver', $driverId));
                 $paid = (float) ($ledger->paid_amount ?? 0);
                 $advance = (float) ($ledger->advance_amount ?? 0);
-                $balance = round($payrollTotal - $paid - $advance, 2);
+                $balance = round($payrollTotal - $paid, 2);
 
                 $alreadyPaid = PayrollPayment::where('person_type', 'driver')->where('person_id', $driverId)->whereDate('week_start', $weekStart)->whereDate('week_end', $weekEnd)->exists();
 
@@ -582,13 +582,16 @@ class PayrollController extends Controller
             ->values();
 
         // HELPERS (only trips with helper)
+        // HELPERS (only trips with helper)
         $helpersRows = $trips->flatMap(function ($t) {
             return $t->helpers->map(function ($h) use ($t) {
                 $rate = (float) ($t->rate_snapshot ?? 0);
 
-                $allowance = $this->allowanceFromRate($rate);
+                $helperCount = max($t->helpers->count(), 1);
 
-                $amount = round($rate * 0.1, 2);
+                $amount = round(($rate * 0.1) / $helperCount, 2);
+
+                $allowance = round($this->allowanceFromRate($rate) / $helperCount, 2);
 
                 $totalSalary = round($amount + $allowance, 2);
 
@@ -626,7 +629,7 @@ class PayrollController extends Controller
                 $ledger = $ledgers->get('helper:' . $helperId);
                 $paid = (float) ($ledger->paid_amount ?? 0);
                 $advance = (float) ($ledger->advance_amount ?? 0);
-                $balance = round($payrollTotal - $paid - $advance, 2);
+                $balance = round($payrollTotal - $paid, 2);
 
                 $alreadyPaid = PayrollPayment::where('person_type', 'helper')->where('person_id', $helperId)->whereDate('week_start', $weekStart)->whereDate('week_end', $weekEnd)->exists();
 
@@ -694,64 +697,38 @@ class PayrollController extends Controller
     }
 
     public function history(Request $request)
-{
-    $from = $request->query('from', now()->subWeeks(8)->startOfWeek(Carbon::MONDAY)->toDateString());
-    $to = $request->query('to', now()->endOfWeek(Carbon::SUNDAY)->toDateString());
+    {
+        $from = $request->query('from', now()->subWeeks(8)->startOfWeek(Carbon::MONDAY)->toDateString());
+        $to = $request->query('to', now()->endOfWeek(Carbon::SUNDAY)->toDateString());
 
-    $filterStart = Carbon::parse($from)->startOfWeek(Carbon::MONDAY)->toDateString();
-    $filterEnd = Carbon::parse($to)->endOfWeek(Carbon::SUNDAY)->toDateString();
+        $filterStart = Carbon::parse($from)->startOfWeek(Carbon::MONDAY)->toDateString();
+        $filterEnd = Carbon::parse($to)->endOfWeek(Carbon::SUNDAY)->toDateString();
 
-    // ✅ SOURCE OF TRUTH (PAYMENTS)
-    $payments = PayrollPayment::whereDate('week_start', '>=', $filterStart)
-        ->whereDate('week_end', '<=', $filterEnd)
-        ->orderByDesc('week_start')
-        ->get();
+        // ✅ SOURCE OF TRUTH (PAYMENTS)
+        $payments = PayrollPayment::whereDate('week_start', '>=', $filterStart)->whereDate('week_end', '<=', $filterEnd)->orderByDesc('week_start')->get();
 
-    $weeks = $payments
-        ->groupBy(fn($p) => $p->week_start . '|' . $p->week_end)
-        ->map(function ($group) {
+        $weeks = $payments
+            ->groupBy(fn($p) => $p->week_start . '|' . $p->week_end)
+            ->map(function ($group) {
+                $weekStart = $group->first()->week_start;
+                $weekEnd = $group->first()->week_end;
 
-            $weekStart = $group->first()->week_start;
-            $weekEnd = $group->first()->week_end;
+                // 🔥 REUSE SAME PAYROLL LOGIC
+                $buildRows = function ($personId, $type) use ($weekStart, $weekEnd) {
+                    $trips = DispatchTrip::with(['destination', 'helpers'])
+                        ->where('status', 'Completed')
+                        ->whereDate('dispatch_date', '>=', $weekStart)
+                        ->whereDate('dispatch_date', '<=', $weekEnd)
+                        ->get();
 
-            // 🔥 REUSE SAME PAYROLL LOGIC
-            $buildRows = function ($personId, $type) use ($weekStart, $weekEnd) {
+                    $rows = collect();
 
-                $trips = DispatchTrip::with(['destination', 'helpers'])
-                    ->where('status', 'Completed')
-                    ->whereDate('dispatch_date', '>=', $weekStart)
-                    ->whereDate('dispatch_date', '<=', $weekEnd)
-                    ->get();
-
-                $rows = collect();
-
-                foreach ($trips as $t) {
-
-                    // DRIVER
-                    if ($type === 'driver' && $t->driver_id == $personId) {
-
-                        $rate = (float) ($t->rate_snapshot ?? 0);
-                        $allowance = $this->allowanceFromRate($rate);
-                        $amount = round($rate * 0.12, 2);
-
-                        $rows->push([
-                            'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
-                            'location' => $t->destination->store_name ?? '-',
-                            'rate' => $rate,
-                            'amount' => $amount,
-                            'allowance' => $allowance,
-                            'total_salary' => $amount + $allowance,
-                        ]);
-                    }
-
-                    // HELPER
-                    if ($type === 'helper') {
-                        foreach ($t->helpers as $h) {
-                            if ($h->id != $personId) continue;
-
+                    foreach ($trips as $t) {
+                        // DRIVER
+                        if ($type === 'driver' && $t->driver_id == $personId) {
                             $rate = (float) ($t->rate_snapshot ?? 0);
                             $allowance = $this->allowanceFromRate($rate);
-                            $amount = round($rate * 0.10, 2);
+                            $amount = round($rate * 0.12, 2);
 
                             $rows->push([
                                 'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
@@ -762,105 +739,164 @@ class PayrollController extends Controller
                                 'total_salary' => $amount + $allowance,
                             ]);
                         }
+
+                        // HELPER
+                        if ($type === 'helper') {
+                            foreach ($t->helpers as $h) {
+                                if ($h->id != $personId) {
+                                    continue;
+                                }
+
+                                $rate = (float) ($t->rate_snapshot ?? 0);
+
+                                $helperCount = max($t->helpers->count(), 1);
+
+                                $allowance = round($this->allowanceFromRate($rate) / $helperCount, 2);
+
+                                $amount = round(($rate * 0.1) / $helperCount, 2);
+
+                                $rows->push([
+                                    'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
+                                    'location' => $t->destination->store_name ?? '-',
+                                    'rate' => $rate,
+                                    'amount' => $amount,
+                                    'allowance' => $allowance,
+                                    'total_salary' => $amount + $allowance,
+                                ]);
+                            }
+                        }
                     }
+
+                    return $rows;
+                };
+
+                // =========================
+                // 🚛 DRIVERS
+                // =========================
+                $driversPayroll = $group
+                    ->where('person_type', 'driver')
+                    ->map(function ($p) use ($buildRows) {
+                        $rows = $buildRows($p->person_id, 'driver');
+
+                        $advance = (float) ($p->balance_advance ?? 0);
+
+                        return [
+                            'person_id' => $p->person_id,
+                            'person_type' => 'driver',
+                            'name' => optional(\App\Models\Driver::find($p->person_id))->name ?? 'Driver',
+                            'rows' => $rows,
+                            'payment_id' => $p->id,
+                            'payroll_total' => $p->amount,
+                            'paid_amount' => $p->final_amount,
+
+                            // ✅ DEDUCTIONS
+                            'advance' => $advance,
+                            'balance_advance_remaining' => $ledger->advance_amount ?? 0,
+                            'net_pay' => round(($p->amount ?? 0) - $advance, 2),
+                            
+
+                            'status' => 'PAID',
+                        ];
+                    })
+                    ->values();
+
+                // =========================
+                // 👷 HELPERS
+                // =========================
+                $helpersPayroll = $group
+                    ->where('person_type', 'helper')
+                    ->map(function ($p) use ($buildRows) {
+                        $rows = $buildRows($p->person_id, 'helper');
+
+                        $advance = (float) ($p->balance_advance ?? 0);
+
+                        return [
+                            'person_id' => $p->person_id,
+                            'person_type' => 'helper',
+                            'name' => optional(\App\Models\Helper::find($p->person_id))->name ?? 'Helper',
+                            'rows' => $rows,
+                            'payment_id' => $p->id,
+                            'payroll_total' => $p->amount,
+                            'paid_amount' => $p->final_amount,
+
+                            // ✅ DEDUCTIONS
+                            'advance' => $advance,
+
+                            'net_pay' => round(($p->amount ?? 0) - $advance, 2),
+
+                            'status' => 'PAID',
+                        ];
+                    })
+                    ->values();
+
+                $driversTotal = $driversPayroll->sum('paid_amount');
+                $helpersTotal = $helpersPayroll->sum('paid_amount');
+
+                return [
+                    'week_start' => $weekStart,
+                    'week_end' => $weekEnd,
+                    'driversPayroll' => $driversPayroll,
+                    'helpersPayroll' => $helpersPayroll,
+                    'driversTotal' => $driversTotal,
+                    'helpersTotal' => $helpersTotal,
+                    'grandTotal' => $driversTotal + $helpersTotal,
+                ];
+            })
+            ->values();
+
+        return view('owner.payroll.history', compact('from', 'to', 'weeks'));
+    }
+
+    public function destroy($id)
+    {
+        DB::transaction(function () use ($id) {
+            $payment = PayrollPayment::findOrFail($id);
+
+            $ledger = PayrollPersonLedger::where([
+                'person_type' => $payment->person_type,
+                'person_id' => $payment->person_id,
+                'week_start' => $payment->week_start,
+                'week_end' => $payment->week_end,
+            ])->first();
+
+            if ($ledger) {
+                $ledger->paid_amount -= $payment->final_amount;
+                $ledger->advance_amount += $payment->balance_advance;
+                $ledger->save();
+            }
+
+            $tripIds = DB::table('payroll_payment_trips')->where('payroll_payment_id', $payment->id)->pluck('dispatch_trip_id');
+
+            DB::table('payroll_payment_trips')->where('payroll_payment_id', $payment->id)->delete();
+
+            $payment->delete();
+
+            foreach ($tripIds as $tripId) {
+                $trip = DispatchTrip::with('helpers')->find($tripId);
+
+                if ($trip) {
+                    $this->updateTripPaymentStatus($trip);
                 }
+            }
+        });
 
-                return $rows;
-            };
+        return back()->with('success', 'Payroll payment deleted successfully.');
+    }
 
-            // =========================
-            // 🚛 DRIVERS
-            // =========================
-            $driversPayroll = $group
-                ->where('person_type', 'driver')
-                ->map(function ($p) use ($buildRows) {
+    private function updateTripPaymentStatus($trip)
+    {
+        $driverPaid = DB::table('payroll_payments')->join('payroll_payment_trips', 'payroll_payments.id', '=', 'payroll_payment_trips.payroll_payment_id')->where('dispatch_trip_id', $trip->id)->where('person_type', 'driver')->exists();
 
-                    $rows = $buildRows($p->person_id, 'driver');
+        $helperIds = $trip->helpers->pluck('id');
 
-                    $advance = (float) ($p->balance_advance ?? 0);
-                    $sss = (float) ($p->sss_deduction ?? 0);
-                    $philhealth = (float) ($p->philhealth_deduction ?? 0);
-                    $pagibig = (float) ($p->pagibig_deduction ?? 0);
+        $helpersPaidCount = DB::table('payroll_payments')->join('payroll_payment_trips', 'payroll_payments.id', '=', 'payroll_payment_trips.payroll_payment_id')->where('dispatch_trip_id', $trip->id)->where('person_type', 'helper')->whereIn('person_id', $helperIds)->distinct()->count('person_id');
 
-                    $totalDeduction = $advance + $sss + $philhealth + $pagibig;
+        $helpersTotal = $helperIds->count();
 
-                    return [
-                        'person_id' => $p->person_id,
-                        'person_type' => 'driver',
-                        'name' => optional(\App\Models\Driver::find($p->person_id))->name ?? 'Driver',
-                        'rows' => $rows,
-
-                        'payroll_total' => $p->amount,
-                        'paid_amount' => $p->final_amount,
-
-                        // ✅ DEDUCTIONS
-                        'advance' => $advance,
-                        'sss' => $sss,
-                        'philhealth' => $philhealth,
-                        'pagibig' => $pagibig,
-                        'total_deduction' => $totalDeduction,
-                        'net_pay' => round(($p->amount ?? 0) - $totalDeduction, 2),
-
-                        'status' => 'PAID',
-                    ];
-                })
-                ->values();
-
-            // =========================
-            // 👷 HELPERS
-            // =========================
-            $helpersPayroll = $group
-                ->where('person_type', 'helper')
-                ->map(function ($p) use ($buildRows) {
-
-                    $rows = $buildRows($p->person_id, 'helper');
-
-                    $advance = (float) ($p->balance_advance ?? 0);
-                    $sss = (float) ($p->sss_deduction ?? 0);
-                    $philhealth = (float) ($p->philhealth_deduction ?? 0);
-                    $pagibig = (float) ($p->pagibig_deduction ?? 0);
-
-                    $totalDeduction = $advance + $sss + $philhealth + $pagibig;
-
-                    return [
-                        'person_id' => $p->person_id,
-                        'person_type' => 'helper',
-                        'name' => optional(\App\Models\Helper::find($p->person_id))->name ?? 'Helper',
-                        'rows' => $rows,
-
-                        'payroll_total' => $p->amount,
-                        'paid_amount' => $p->final_amount,
-
-                        // ✅ DEDUCTIONS
-                        'advance' => $advance,
-                        'sss' => $sss,
-                        'philhealth' => $philhealth,
-                        'pagibig' => $pagibig,
-                        'total_deduction' => $totalDeduction,
-                        'net_pay' => round(($p->amount ?? 0) - $totalDeduction, 2),
-
-                        'status' => 'PAID',
-                    ];
-                })
-                ->values();
-
-            $driversTotal = $driversPayroll->sum('paid_amount');
-            $helpersTotal = $helpersPayroll->sum('paid_amount');
-
-            return [
-                'week_start' => $weekStart,
-                'week_end' => $weekEnd,
-                'driversPayroll' => $driversPayroll,
-                'helpersPayroll' => $helpersPayroll,
-                'driversTotal' => $driversTotal,
-                'helpersTotal' => $helpersTotal,
-                'grandTotal' => $driversTotal + $helpersTotal,
-            ];
-        })
-        ->values();
-
-    return view('owner.payroll.history', compact('from', 'to', 'weeks'));
-}
+        $trip->update([
+            'payment_status' => $driverPaid && $helpersPaidCount === $helpersTotal ? 'Paid' : 'Unpaid',
+        ]);
+    }
 
     public function expenses(Request $request)
     {

@@ -150,7 +150,8 @@
 
                     {{-- WEEK TITLE --}}
                     <div class="fw-bold fs-5 mb-3 text-primary">
-                        {{ $w['week_start'] }} → {{ $w['week_end'] }}
+                        {{ \Carbon\Carbon::parse($w['week_start'])->format('M d') }} –
+                        {{ \Carbon\Carbon::parse($w['week_end'])->format('M d, Y') }}
                     </div>
 
 
@@ -233,6 +234,17 @@
                                                     PDF
                                                 </a>
 
+                                                <form method="POST"
+                                                    action="{{ route('owner.payroll.delete-payment', $p['payment_id']) }}"
+                                                    onsubmit="return confirm('Delete this payroll payment?');">
+                                                    @csrf
+                                                    @method('DELETE')
+
+                                                    <button class="btn btn-sm btn-outline-danger">
+                                                        Delete
+                                                    </button>
+                                                </form>
+
                                             </div>
 
                                         </div>
@@ -305,9 +317,20 @@
 
                                                     <!-- DEDUCTIONS -->
                                                     <tr>
-                                                        <th colspan="5" class="text-end text-danger">TOTAL DEDUCTIONS:</th>
+                                                        <th colspan="5" class="text-end text-danger">
+                                                            ADVANCE DEDUCTION:
+                                                        </th>
                                                         <th class="text-end text-danger">
-                                                            ₱ {{ number_format($p['total_deduction'], 2) }}
+                                                            ₱ {{ number_format($p['advance'] ?? 0, 2) }}
+                                                        </th>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <th colspan="5" class="text-end text-primary">
+                                                            BALANCE ADVANCE:
+                                                        </th>
+                                                        <th class="text-end text-primary">
+                                                            ₱ {{ number_format($p['balance_advance_remaining'] ?? 0, 2) }}
                                                         </th>
                                                     </tr>
 
@@ -318,6 +341,7 @@
                                                             ₱ {{ number_format($p['net_pay'], 2) }}
                                                         </th>
                                                     </tr>
+
 
                                                 </tfoot>
 
@@ -384,6 +408,18 @@
                                                     PDF
                                                 </a>
 
+                                                <form method="POST"
+                                                    action="{{ route('owner.payroll.delete-payment', $p['payment_id']) }}"
+                                                    onsubmit="return confirm('Delete this payroll payment?');">
+                                                    @csrf
+                                                    @method('DELETE')
+
+                                                    <button class="btn btn-sm btn-outline-danger">
+                                                        Delete
+                                                    </button>
+                                                </form>
+
+
                                             </div>
 
                                         </div>
@@ -446,9 +482,8 @@
                                                 </tbody>
 
 
-                                                 <tfoot class="table-light">
+                                                <tfoot class="table-light">
 
-                                                    <!-- TOTAL -->
                                                     <tr>
                                                         <th colspan="5" class="text-end">TOTAL:</th>
                                                         <th class="text-end fw-bold">
@@ -456,15 +491,24 @@
                                                         </th>
                                                     </tr>
 
-                                                    <!-- DEDUCTIONS -->
                                                     <tr>
-                                                        <th colspan="5" class="text-end text-danger"> TOTAL DEDUCTIONS:</th>
+                                                        <th colspan="5" class="text-end text-danger">
+                                                            ADVANCE DEDUCTION:
+                                                        </th>
                                                         <th class="text-end text-danger">
-                                                            ₱ {{ number_format($p['total_deduction'], 2) }}
+                                                            ₱ {{ number_format($p['advance'] ?? 0, 2) }}
                                                         </th>
                                                     </tr>
 
-                                                    <!-- NET PAY -->
+                                                    <tr>
+                                                        <th colspan="5" class="text-end text-primary">
+                                                            BALANCE ADVANCE:
+                                                        </th>
+                                                        <th class="text-end text-primary">
+                                                            ₱ {{ number_format($p['balance_advance_remaining'] ?? 0, 2) }}
+                                                        </th>
+                                                    </tr>
+
                                                     <tr>
                                                         <th colspan="5" class="text-end text-info">NET PAY:</th>
                                                         <th class="text-end text-info fw-bold">

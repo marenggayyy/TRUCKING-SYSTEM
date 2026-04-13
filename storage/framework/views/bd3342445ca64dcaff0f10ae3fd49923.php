@@ -48,7 +48,7 @@
 
                         
                         <a href="<?php echo e(route('owner.trips.history')); ?>" class="btn btn-outline-dark ui-btn-equal">
-                            <i class="bi bi-clock-history me-1"></i> History
+                            <i class="bi bi-clock-history me-1"></i>
                         </a>
 
                         
@@ -218,44 +218,47 @@
 
 
                                     
-<div class="trip-actions mt-0">
+                                    <div class="trip-actions mt-0">
 
-    <div class="d-flex gap-2">
+                                        <div class="d-flex gap-2">
 
-        
-        <button class="btn btn-outline-secondary btn-sm"
-            data-bs-toggle="modal"
-            data-bs-target="#editBillingModal-<?php echo e($t->id); ?>">
-            <i class="bi bi-pencil"></i>
-        </button>
+                                            
+                                            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
+                                                data-bs-target="#editBillingModal-<?php echo e($t->id); ?>">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
 
-        
-        <?php if(($t->billing_status ?? 'Unbilled') !== 'Billed'): ?>
+                                            
+                                            <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal"
+                                                data-bs-target="#confirmDelete-<?php echo e($t->id); ?>">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
 
-            <?php if(!$t->check_release_date): ?>
-                <button class="btn btn-secondary btn-sm flex-grow-1" disabled>
-                    Complete Billing First
-                </button>
-            <?php else: ?>
-                <button class="btn btn-success btn-sm flex-grow-1"
-                    data-bs-toggle="modal"
-                    data-bs-target="#billTripModal-<?php echo e($t->id); ?>">
-                    Mark as Billed
-                </button>
-            <?php endif; ?>
+                                            
+                                            <?php if(($t->billing_status ?? 'Unbilled') !== 'Billed'): ?>
+                                                <?php if(!$t->check_release_date): ?>
+                                                    <button class="btn btn-secondary btn-sm flex-grow-1" disabled>
+                                                        Complete Billing First
+                                                    </button>
+                                                <?php else: ?>
+                                                    <button class="btn btn-success btn-sm flex-grow-1"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#billTripModal-<?php echo e($t->id); ?>">
+                                                        Mark as Billed
+                                                    </button>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
 
-        <?php endif; ?>
+                                        </div>
 
-    </div>
+                                        
+                                        <?php if(($t->billing_status ?? 'Unbilled') !== 'Billed' && !$t->check_release_date): ?>
+                                            <small class="text-danger d-block mt-1">
+                                                Set check release date first
+                                            </small>
+                                        <?php endif; ?>
 
-    
-    <?php if(($t->billing_status ?? 'Unbilled') !== 'Billed' && !$t->check_release_date): ?>
-        <small class="text-danger d-block mt-1">
-            Set check release date first
-        </small>
-    <?php endif; ?>
-
-</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -284,7 +287,52 @@
 
         </div>
 
+        <?php $__currentLoopData = $trips; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="modal fade" id="confirmDelete-<?php echo e($t->id); ?>" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
 
+                        <div class="modal-header">
+                            <h6 class="modal-title text-danger">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Delete Trip
+                            </h6>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            Are you sure you want to delete this trip?
+
+                            <div class="mt-2">
+                                <strong><?php echo e($t->trip_ticket_no); ?></strong>
+                            </div>
+
+                            <div class="text-muted small mt-2">
+                                This will also release resources if needed.
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+
+                            <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                Cancel
+                            </button>
+
+                            <form method="POST" action="<?php echo e(route('owner.trips.destroy', $t->id)); ?>">
+                                <?php echo csrf_field(); ?>
+                                <?php echo method_field('DELETE'); ?>
+
+                                <button type="submit" class="btn btn-danger">
+                                    Yes, Delete
+                                </button>
+                            </form>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         
         <?php $__currentLoopData = $trips; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <div class="modal fade" id="billTripModal-<?php echo e($t->id); ?>" tabindex="-1">

@@ -342,33 +342,51 @@
         </div>
 
         
-        <div class="modal fade" id="deleteAllTripsModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header">
-                        <h6 class="modal-title">Delete All Trips</h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        Are you sure you want to <strong>delete ALL trips</strong>?
-                        <div class="text-muted small mt-2">This cannot be undone.</div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary ui-pill-btn" data-bs-dismiss="modal">
-                            Cancel
-                        </button>
-                        <form method="POST" action="<?php echo e(route('owner.trips.destroyAll')); ?>">
-                            <?php echo csrf_field(); ?>
-                            <?php echo method_field('DELETE'); ?>
-                            <button type="submit" class="btn btn-danger ui-pill-btn">
-                                Yes, Delete All
-                            </button>
-                        </form>
+
+        <?php $__currentLoopData = $trips; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <?php if(in_array($t->status, ['Draft', 'Assigned', 'Dispatched'])): ?>
+                <div class="modal fade" id="confirmDelete-<?php echo e($t->id); ?>" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow">
+
+                            <div class="modal-header">
+                                <h6 class="modal-title text-danger">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Delete Trip
+                                </h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                Are you sure you want to delete this trip?
+                                <div class="mt-2">
+                                    <strong><?php echo e($t->trip_ticket_no); ?></strong>
+                                </div>
+                                <div class="text-muted small mt-2">
+                                    This action cannot be undone.
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                    Cancel
+                                </button>
+
+                                <form method="POST" action="<?php echo e(route('owner.trips.destroy', $t->id)); ?>">
+                                    <?php echo csrf_field(); ?>
+                                    <?php echo method_field('DELETE'); ?>
+
+                                    <button type="submit" class="btn btn-danger">
+                                        Yes, Delete
+                                    </button>
+                                </form>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
+            <?php endif; ?>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         
         <?php $__currentLoopData = $trips; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <?php if($t->status === 'Draft'): ?>
@@ -508,7 +526,8 @@
                                                 <select name="destination_id" class="form-select" required>
 
                                                     <?php $__currentLoopData = $destinations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $d): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                                        <option value="<?php echo e($d->id); ?>"  data-truck="<?php echo e($d->truck_type); ?>"
+                                                        <option value="<?php echo e($d->id); ?>"
+                                                            data-truck="<?php echo e($d->truck_type); ?>"
                                                             <?php echo e($d->id == $t->destination_id ? 'selected' : ''); ?>>
                                                             <?php echo e(strtoupper($d->truck_type)); ?> rate - <?php echo e($d->store_code); ?> -
                                                             <?php echo e($d->store_name); ?>
@@ -772,8 +791,8 @@
 
                                         </div>
 
-                                          
-                                        <div class="trip-status-row" >
+                                        
+                                        <div class="trip-status-row">
 
                                             <span class="trip-status delivery">
                                                 <?php echo e($t->status); ?>
@@ -832,7 +851,7 @@
                                             </div>
                                         </div>
 
-                                      
+
                                         <hr class="my-3">
 
                                     </div> 
@@ -866,21 +885,44 @@
                                             <?php endif; ?>
 
                                             <?php if($t->status == 'Assigned'): ?>
-                                                <button class="btn btn-primary btn-sm w-100" data-bs-toggle="modal"
-                                                    data-bs-target="#dispatchModal-<?php echo e($t->id); ?>">
-                                                    Ready to Dispatch
-                                                </button>
+                                                <div class="d-flex gap-2">
+
+                                                    
+                                                    <button class="btn btn-primary btn-sm w-100" data-bs-toggle="modal"
+                                                        data-bs-target="#dispatchModal-<?php echo e($t->id); ?>">
+                                                        Ready to Dispatch
+                                                    </button>
+
+                                                    
+                                                    <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal"
+                                                        data-bs-target="#confirmDelete-<?php echo e($t->id); ?>">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+
+                                                </div>
                                             <?php endif; ?>
 
 
                                             <?php if($t->status == 'Dispatched'): ?>
-                                                <form method="POST" action="<?php echo e(route('owner.trips.deliver', $t->id)); ?>"
-                                                    class="trip-dispatch">
-                                                    <?php echo csrf_field(); ?>
-                                                    <button class="btn btn-success btn-sm w-100">
-                                                        Delivered
+                                                <div class="d-flex gap-2">
+
+                                                    
+                                                    <form method="POST"
+                                                        action="<?php echo e(route('owner.trips.deliver', $t->id)); ?>"
+                                                        class="trip-dispatch w-100">
+                                                        <?php echo csrf_field(); ?>
+                                                        <button class="btn btn-success btn-sm w-100">
+                                                            Delivered
+                                                        </button>
+                                                    </form>
+
+                                                    
+                                                    <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal"
+                                                        data-bs-target="#confirmDelete-<?php echo e($t->id); ?>">
+                                                        <i class="bi bi-trash"></i>
                                                     </button>
-                                                </form>
+
+                                                </div>
                                             <?php endif; ?>
 
                                         </div>
@@ -890,13 +932,13 @@
 
                             </div>
                         </div>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
 
-                            <div class="text-center py-5">
-                                <div class="text-muted mb-2"><i class="bi bi-truck fs-3"></i></div>
-                                <div class="fw-semibold">No trips found</div>
-                                <div class="text-muted small">Create your first dispatch to get started.</div>
-                            </div>
+                        <div class="text-center py-5">
+                            <div class="text-muted mb-2"><i class="bi bi-truck fs-3"></i></div>
+                            <div class="fw-semibold">No trips found</div>
+                            <div class="text-muted small">Create your first dispatch to get started.</div>
+                        </div>
                     <?php endif; ?>
 
                 </div>
@@ -915,7 +957,7 @@
 
     
     <?php $__currentLoopData = $trips; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-        <?php if($t->status === 'Draft'): ?>
+        <?php if(in_array($t->status, ['Draft'])): ?>
             <div class="modal fade" id="confirmDispatch-<?php echo e($t->id); ?>" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content border-0 shadow">

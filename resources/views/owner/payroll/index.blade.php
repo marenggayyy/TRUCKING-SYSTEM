@@ -3,6 +3,8 @@
 @section('title', 'Payroll')
 
 @section('content')
+
+
     <div class="max-w-6xl mx-auto px-4 py-4">
 
         <div class="ui-hero p-3 p-lg-4 mb-3 mb-lg-4">
@@ -14,7 +16,7 @@
                     <div class="text-muted small">
                         Working payroll preview
                         <span class="badge bg-light text-primary border ms-2">
-                            {{ $weekStart->format('Y-m-d') }} → {{ $weekEnd->format('Y-m-d') }}
+                            {{ $weekStart->format('M d, Y') }} – {{ $weekEnd->format('M d, Y') }}
                         </span>
                     </div>
                 </div>
@@ -38,6 +40,16 @@
 
         @if (session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
+
+        @if ($errors->any())
+            <div class="alert alert-danger">
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
         @endif
 
         <div class="card ui-card border-0 shadow-sm">
@@ -318,32 +330,16 @@
                         </div>
 
                         <!-- INPUTS (ETO ANG FIXED PART MO) -->
+
                         <div class="mb-2">
-                            <label class="form-label">Balance Advance</label>
+                            <label class="form-label">Advance Balance</label>
+                            <input type="number" step="0.01" name="advance_amount" class="form-control"
+                                value="0">
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label">Advance Deduction</label>
                             <input type="number" step="0.01" name="balance_advance" class="form-control"
-                                value="0">
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label">Bonus</label>
-                            <input type="number" step="0.01" name="bonus" class="form-control" value="0">
-                        </div>
-
-                        <div class="mb-2">
-                            <label>SSS Deduction</label>
-                            <input type="number" step="0.01" name="sss_deduction" class="form-control"
-                                value="0">
-                        </div>
-
-                        <div class="mb-2">
-                            <label>PhilHealth Deduction</label>
-                            <input type="number" step="0.01" name="philhealth_deduction" class="form-control"
-                                value="0">
-                        </div>
-
-                        <div class="mb-2">
-                            <label>Pag-IBIG Deduction</label>
-                            <input type="number" step="0.01" name="pagibig_deduction" class="form-control"
                                 value="0">
                         </div>
 

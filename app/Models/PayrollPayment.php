@@ -18,9 +18,6 @@ class PayrollPayment extends Model
     'balance_advance',
 
     // ✅ ADD THESE
-    'sss_deduction',
-    'philhealth_deduction',
-    'pagibig_deduction',
 
     'final_amount',
     'payment_mode',

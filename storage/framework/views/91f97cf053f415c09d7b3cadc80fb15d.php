@@ -153,7 +153,8 @@
 
                     
                     <div class="fw-bold fs-5 mb-3 text-primary">
-                        <?php echo e($w['week_start']); ?> → <?php echo e($w['week_end']); ?>
+                        <?php echo e(\Carbon\Carbon::parse($w['week_start'])->format('M d')); ?> –
+                        <?php echo e(\Carbon\Carbon::parse($w['week_end'])->format('M d, Y')); ?>
 
                     </div>
 
@@ -241,6 +242,17 @@
                                                     PDF
                                                 </a>
 
+                                                <form method="POST"
+                                                    action="<?php echo e(route('owner.payroll.delete-payment', $p['payment_id'])); ?>"
+                                                    onsubmit="return confirm('Delete this payroll payment?');">
+                                                    <?php echo csrf_field(); ?>
+                                                    <?php echo method_field('DELETE'); ?>
+
+                                                    <button class="btn btn-sm btn-outline-danger">
+                                                        Delete
+                                                    </button>
+                                                </form>
+
                                             </div>
 
                                         </div>
@@ -317,9 +329,21 @@
 
                                                     <!-- DEDUCTIONS -->
                                                     <tr>
-                                                        <th colspan="5" class="text-end text-danger">TOTAL DEDUCTIONS:</th>
+                                                        <th colspan="5" class="text-end text-danger">
+                                                            ADVANCE DEDUCTION:
+                                                        </th>
                                                         <th class="text-end text-danger">
-                                                            ₱ <?php echo e(number_format($p['total_deduction'], 2)); ?>
+                                                            ₱ <?php echo e(number_format($p['advance'] ?? 0, 2)); ?>
+
+                                                        </th>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <th colspan="5" class="text-end text-primary">
+                                                            BALANCE ADVANCE:
+                                                        </th>
+                                                        <th class="text-end text-primary">
+                                                            ₱ <?php echo e(number_format($p['balance_advance_remaining'] ?? 0, 2)); ?>
 
                                                         </th>
                                                     </tr>
@@ -332,6 +356,7 @@
 
                                                         </th>
                                                     </tr>
+
 
                                                 </tfoot>
 
@@ -400,6 +425,18 @@
                                                     PDF
                                                 </a>
 
+                                                <form method="POST"
+                                                    action="<?php echo e(route('owner.payroll.delete-payment', $p['payment_id'])); ?>"
+                                                    onsubmit="return confirm('Delete this payroll payment?');">
+                                                    <?php echo csrf_field(); ?>
+                                                    <?php echo method_field('DELETE'); ?>
+
+                                                    <button class="btn btn-sm btn-outline-danger">
+                                                        Delete
+                                                    </button>
+                                                </form>
+
+
                                             </div>
 
                                         </div>
@@ -465,9 +502,8 @@
                                                 </tbody>
 
 
-                                                 <tfoot class="table-light">
+                                                <tfoot class="table-light">
 
-                                                    <!-- TOTAL -->
                                                     <tr>
                                                         <th colspan="5" class="text-end">TOTAL:</th>
                                                         <th class="text-end fw-bold">
@@ -476,16 +512,26 @@
                                                         </th>
                                                     </tr>
 
-                                                    <!-- DEDUCTIONS -->
                                                     <tr>
-                                                        <th colspan="5" class="text-end text-danger"> TOTAL DEDUCTIONS:</th>
+                                                        <th colspan="5" class="text-end text-danger">
+                                                            ADVANCE DEDUCTION:
+                                                        </th>
                                                         <th class="text-end text-danger">
-                                                            ₱ <?php echo e(number_format($p['total_deduction'], 2)); ?>
+                                                            ₱ <?php echo e(number_format($p['advance'] ?? 0, 2)); ?>
 
                                                         </th>
                                                     </tr>
 
-                                                    <!-- NET PAY -->
+                                                    <tr>
+                                                        <th colspan="5" class="text-end text-primary">
+                                                            BALANCE ADVANCE:
+                                                        </th>
+                                                        <th class="text-end text-primary">
+                                                            ₱ <?php echo e(number_format($p['balance_advance_remaining'] ?? 0, 2)); ?>
+
+                                                        </th>
+                                                    </tr>
+
                                                     <tr>
                                                         <th colspan="5" class="text-end text-info">NET PAY:</th>
                                                         <th class="text-end text-info fw-bold">
