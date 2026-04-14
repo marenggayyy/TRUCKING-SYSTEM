@@ -1,8 +1,6 @@
-@extends('layouts.owner')
+<?php $__env->startSection('title', 'Payroll'); ?>
 
-@section('title', 'Payroll')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 
 
     <div class="max-w-6xl mx-auto px-4 py-4">
@@ -16,18 +14,19 @@
                     <div class="text-muted small">
                         Working payroll preview
                         <span class="badge bg-light text-primary border ms-2">
-                            {{ $weekStart->format('M d, Y') }} – {{ $weekEnd->format('M d, Y') }}
+                            <?php echo e($weekStart->format('M d, Y')); ?> – <?php echo e($weekEnd->format('M d, Y')); ?>
+
                         </span>
                     </div>
                 </div>
 
                 <div class="d-flex gap-2">
 
-                    <a class="btn btn-outline-secondary w-full w-sm-auto" href="{{ route('owner.payroll.dashboard') }}">
+                    <a class="btn btn-outline-secondary w-full w-sm-auto" href="<?php echo e(route('owner.payroll.dashboard')); ?>">
                         ← Dashboard
                     </a>
 
-                    <a class="btn btn-outline-secondary w-full w-sm-auto" href="{{ route('owner.payroll.history') }}">
+                    <a class="btn btn-outline-secondary w-full w-sm-auto" href="<?php echo e(route('owner.payroll.history')); ?>">
                         → History
                     </a>
 
@@ -38,23 +37,23 @@
 
 
 
-        @if (session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
-        @endif
+        <?php if(session('success')): ?>
+            <div class="alert alert-success"><?php echo e(session('success')); ?></div>
+        <?php endif; ?>
 
-        @if ($errors->any())
+        <?php if($errors->any()): ?>
             <div class="alert alert-danger">
                 <ul class="mb-0">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
+                    <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <li><?php echo e($error); ?></li>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </ul>
             </div>
-        @endif
+        <?php endif; ?>
 
         <div class="card ui-card border-0 shadow-sm">
             <div class="card-body">
-                {{-- Tabs --}}
+                
                 <ul class="nav nav-pills d-flex flex-column flex-md-row gap-2 mb-3 align-items-start align-items-md-center">
 
                     <li class="nav-item">
@@ -62,7 +61,8 @@
 
                             Drivers
                             <span class="badge bg-light text-dark ms-1">
-                                {{ $driversPayroll->count() }}
+                                <?php echo e($driversPayroll->count()); ?>
+
                             </span>
 
                         </button>
@@ -73,18 +73,19 @@
 
                             Helpers
                             <span class="badge bg-light text-dark ms-1">
-                                {{ $helpersPayroll->count() }}
+                                <?php echo e($helpersPayroll->count()); ?>
+
                             </span>
 
                         </button>
                     </li>
 
-                    <form method="POST" action="{{ route('owner.payroll.finalize') }}"
+                    <form method="POST" action="<?php echo e(route('owner.payroll.finalize')); ?>"
                         class="d-flex w-full w-md-auto justify-content-start mt-2 mt-md-0">
-                        @csrf
+                        <?php echo csrf_field(); ?>
 
-                        <input type="hidden" name="week_start" value="{{ $weekStart->toDateString() }}">
-                        <input type="hidden" name="week_end" value="{{ $weekEnd->toDateString() }}">
+                        <input type="hidden" name="week_start" value="<?php echo e($weekStart->toDateString()); ?>">
+                        <input type="hidden" name="week_end" value="<?php echo e($weekEnd->toDateString()); ?>">
 
                         <button class="btn btn-primary w-full w-md-auto">
                             Finalize Payroll Week
@@ -95,10 +96,10 @@
 
                 <div class="tab-content">
 
-                    {{-- DRIVERS --}}
+                    
                     <div class="tab-pane fade show active" id="tabDrivers">
-                        @forelse($driversPayroll as $p)
-                            @php
+                        <?php $__empty_1 = true; $__currentLoopData = $driversPayroll; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                            <?php
                                 $status = $p['status'] ?? 'UNPAID';
                                 $badge = match ($status) {
                                     'PAID' => 'success',
@@ -107,13 +108,13 @@
                                     'NO TRIPS' => 'secondary',
                                     default => 'danger',
                                 };
-                            @endphp
+                            ?>
 
-                            <form method="POST" action="{{ route('owner.payroll.update') }}">
-                                @csrf
+                            <form method="POST" action="<?php echo e(route('owner.payroll.update')); ?>">
+                                <?php echo csrf_field(); ?>
 
-                                <input type="hidden" name="from" value="{{ $from }}">
-                                <input type="hidden" name="to" value="{{ $to }}">
+                                <input type="hidden" name="from" value="<?php echo e($from); ?>">
+                                <input type="hidden" name="to" value="<?php echo e($to); ?>">
                                 <input type="hidden" name="active_tab" class="active-tab-input" value="tabDrivers">
                                 <input type="hidden" name="person_type" value="driver">
                                 <div class="card border-0 shadow-sm mb-3">
@@ -122,15 +123,15 @@
                                         <div
                                             class="p-3 border-bottom d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
                                             <div>
-                                                <div class="fw-bold text-info">{{ $p['name'] }} <span
+                                                <div class="fw-bold text-info"><?php echo e($p['name']); ?> <span
                                                         class="text-muted small ms-1">Driver</span></div>
                                             </div>
 
                                             <div class="d-flex justify-content-end align-items-center gap-2">
 
-                                                <span class="badge bg-{{ $badge }}">{{ $status }}</span>
+                                                <span class="badge bg-<?php echo e($badge); ?>"><?php echo e($status); ?></span>
 
-                                                @if ($status !== 'PAID')
+                                                <?php if($status !== 'PAID'): ?>
                                                     <button type="button" class="btn btn-sm btn-warning edit-payroll-btn">
                                                         Edit
                                                     </button>
@@ -142,14 +143,14 @@
 
                                                     <button type="button" class="btn btn-sm btn-success pay-btn"
                                                         data-bs-toggle="modal" data-bs-target="#payModal"
-                                                        data-person-id="{{ $p['person_id'] }}" data-person-type="driver"
-                                                        data-name="{{ $p['name'] }}"
-                                                        data-trips="{{ count($p['rows']) }}"
-                                                        data-amount="{{ $p['payroll_total'] }}"
-                                                        data-balance-advance="{{ $p['latest_balance_advance'] ?? 0 }}">
+                                                        data-person-id="<?php echo e($p['person_id']); ?>" data-person-type="driver"
+                                                        data-name="<?php echo e($p['name']); ?>"
+                                                        data-trips="<?php echo e(count($p['rows'])); ?>"
+                                                        data-amount="<?php echo e($p['payroll_total']); ?>"
+                                                        data-balance-advance="<?php echo e($p['latest_balance_advance'] ?? 0); ?>">
                                                         Pay
                                                     </button>
-                                                @endif
+                                                <?php endif; ?>
 
                                             </div>
                                         </div>
@@ -168,43 +169,46 @@
                                                 </thead>
 
                                                 <tbody>
-                                                    @foreach ($p['rows'] as $r)
+                                                    <?php $__currentLoopData = $p['rows']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $r): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                         <tr>
-                                                            <td class="text-center" data-label="Date">{{ $r['date'] }}
+                                                            <td class="text-center" data-label="Date"><?php echo e($r['date']); ?>
+
                                                             </td>
                                                             <td class="break-words" data-label="Destination">
-                                                                {{ $r['location'] }}</td>
+                                                                <?php echo e($r['location']); ?></td>
 
-                                                            <td>{{ number_format($r['rate'], 2) }}</td>
+                                                            <td><?php echo e(number_format($r['rate'], 2)); ?></td>
 
                                                             <td>
                                                                 <input type="number" step="0.01"
-                                                                    name="rows[{{ $r['id'] }}][amount]"
-                                                                    value="{{ $r['amount'] }}"
+                                                                    name="rows[<?php echo e($r['id']); ?>][amount]"
+                                                                    value="<?php echo e($r['amount']); ?>"
                                                                     class="form-control form-control-sm payroll-edit-input"
                                                                     readonly>
                                                             </td>
 
                                                             <td>
                                                                 <input type="number" step="0.01"
-                                                                    name="rows[{{ $r['id'] }}][allowance]"
-                                                                    value="{{ $r['allowance'] }}"
+                                                                    name="rows[<?php echo e($r['id']); ?>][allowance]"
+                                                                    value="<?php echo e($r['allowance']); ?>"
                                                                     class="form-control form-control-sm payroll-edit-input"
                                                                     readonly>
                                                             </td>
 
                                                             <td class="text-end fw-bold" data-label="Totals">
-                                                                {{ number_format($r['total_salary'], 2) }}
+                                                                <?php echo e(number_format($r['total_salary'], 2)); ?>
+
                                                             </td>
                                                         </tr>
-                                                    @endforeach
+                                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                                 </tbody>
 
                                                 <tfoot>
                                                     <tr>
                                                         <th colspan="5" class="text-end">TOTAL</th>
                                                         <th class="text-end">
-                                                            ₱ {{ number_format($p['payroll_total'], 2) }}
+                                                            ₱ <?php echo e(number_format($p['payroll_total'], 2)); ?>
+
                                                         </th>
                                                     </tr>
                                                 </tfoot>
@@ -213,15 +217,15 @@
                                     </div>
                                 </div>
                             </form>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                             <div class="alert alert-light border">No driver payroll rows found.</div>
-                        @endforelse
+                        <?php endif; ?>
                     </div>
 
-                    {{-- HELPERS --}}
+                    
                     <div class="tab-pane fade" id="tabHelpers">
-                        @forelse($helpersPayroll as $p)
-                            @php
+                        <?php $__empty_1 = true; $__currentLoopData = $helpersPayroll; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                            <?php
                                 $status = $p['status'] ?? 'UNPAID';
                                 $badge = match ($status) {
                                     'PAID' => 'success',
@@ -230,12 +234,12 @@
                                     'NO TRIPS' => 'secondary',
                                     default => 'danger',
                                 };
-                            @endphp
-                            <form method="POST" action="{{ route('owner.payroll.update') }}">
-                                @csrf
+                            ?>
+                            <form method="POST" action="<?php echo e(route('owner.payroll.update')); ?>">
+                                <?php echo csrf_field(); ?>
 
-                                <input type="hidden" name="from" value="{{ $from }}">
-                                <input type="hidden" name="to" value="{{ $to }}">
+                                <input type="hidden" name="from" value="<?php echo e($from); ?>">
+                                <input type="hidden" name="to" value="<?php echo e($to); ?>">
                                 <input type="hidden" name="active_tab" class="active-tab-input" value="tabHelpers">
                                 <input type="hidden" name="person_type" value="helper">
                                 <div class="card border-0 shadow-sm mb-3">
@@ -243,15 +247,15 @@
 
                                         <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
                                             <div>
-                                                <div class="fw-bold text-info">{{ $p['name'] }} <span
+                                                <div class="fw-bold text-info"><?php echo e($p['name']); ?> <span
                                                         class="text-muted small ms-1">Helper</span></div>
                                             </div>
 
                                             <div class="d-flex justify-content-end align-items-center gap-2">
 
-                                                <span class="badge bg-{{ $badge }}">{{ $status }}</span>
+                                                <span class="badge bg-<?php echo e($badge); ?>"><?php echo e($status); ?></span>
 
-                                                @if ($status !== 'PAID')
+                                                <?php if($status !== 'PAID'): ?>
                                                     <button type="button"
                                                         class="btn btn-sm btn-warning edit-payroll-btn">
                                                         Edit
@@ -264,14 +268,14 @@
 
                                                     <button type="button" class="btn btn-sm btn-success pay-btn"
                                                         data-bs-toggle="modal" data-bs-target="#payModal"
-                                                        data-person-id="{{ $p['person_id'] }}" data-person-type="helper"
-                                                        data-name="{{ $p['name'] }}"
-                                                        data-trips="{{ count($p['rows']) }}"
-                                                        data-amount="{{ $p['payroll_total'] }}"
-                                                        data-balance-advance="{{ $p['latest_balance_advance'] ?? 0 }}">
+                                                        data-person-id="<?php echo e($p['person_id']); ?>" data-person-type="helper"
+                                                        data-name="<?php echo e($p['name']); ?>"
+                                                        data-trips="<?php echo e(count($p['rows'])); ?>"
+                                                        data-amount="<?php echo e($p['payroll_total']); ?>"
+                                                        data-balance-advance="<?php echo e($p['latest_balance_advance'] ?? 0); ?>">
                                                         Pay
                                                     </button>
-                                                @endif
+                                                <?php endif; ?>
 
                                             </div>
                                         </div>
@@ -290,43 +294,46 @@
                                                 </thead>
 
                                                 <tbody>
-                                                    @foreach ($p['rows'] as $r)
+                                                    <?php $__currentLoopData = $p['rows']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $r): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                         <tr>
-                                                            <td class="text-center" data-label="Date">{{ $r['date'] }}
+                                                            <td class="text-center" data-label="Date"><?php echo e($r['date']); ?>
+
                                                             </td>
 
                                                             <td class="break-words" data-label="Destination">
-                                                                {{ $r['location'] }}</td>
+                                                                <?php echo e($r['location']); ?></td>
 
-                                                            <td>{{ number_format($r['rate'], 2) }}</td>
+                                                            <td><?php echo e(number_format($r['rate'], 2)); ?></td>
 
                                                             <td>
                                                                 <input type="number" step="0.01"
-                                                                    name="rows[{{ $r['id'] }}][amount]"
-                                                                    value="{{ $r['amount'] }}"
+                                                                    name="rows[<?php echo e($r['id']); ?>][amount]"
+                                                                    value="<?php echo e($r['amount']); ?>"
                                                                     class="form-control form-control-sm payroll-edit-input"
                                                                     readonly>
                                                             </td>
                                                             <td>
                                                                 <input type="number" step="0.01"
-                                                                    name="rows[{{ $r['id'] }}][allowance]"
-                                                                    value="{{ $r['allowance'] }}"
+                                                                    name="rows[<?php echo e($r['id']); ?>][allowance]"
+                                                                    value="<?php echo e($r['allowance']); ?>"
                                                                     class="form-control form-control-sm payroll-edit-input"
                                                                     readonly>
                                                             </td>
 
                                                             <td class="text-end fw-bold" data-label="Totals">
-                                                                {{ number_format($r['total_salary'], 2) }}
+                                                                <?php echo e(number_format($r['total_salary'], 2)); ?>
+
                                                             </td>
                                                         </tr>
-                                                    @endforeach
+                                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                                 </tbody>
 
                                                 <tfoot>
                                                     <tr>
                                                         <th colspan="5" class="text-end">TOTAL</th>
                                                         <th class="text-end">
-                                                            ₱ {{ number_format($p['payroll_total'], 2) }}
+                                                            ₱ <?php echo e(number_format($p['payroll_total'], 2)); ?>
+
                                                         </th>
                                                     </tr>
                                                 </tfoot>
@@ -336,9 +343,9 @@
                                     </div>
                                 </div>
                             </form>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                             <div class="alert alert-light border">No helper payroll rows found.</div>
-                        @endforelse
+                        <?php endif; ?>
                     </div>
 
 
@@ -354,8 +361,8 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
 
-                <form method="POST" action="{{ route('owner.payroll.pay') }}">
-                    @csrf
+                <form method="POST" action="<?php echo e(route('owner.payroll.pay')); ?>">
+                    <?php echo csrf_field(); ?>
                     <div class="modal-header">
                         <h6 class="modal-title">Payroll Payment</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -368,8 +375,8 @@
                         <input type="hidden" name="amount" id="modalAmount">
                         
 
-                        <input type="hidden" name="week_start" value="{{ $weekStart->toDateString() }}">
-                        <input type="hidden" name="week_end" value="{{ $weekEnd->toDateString() }}">
+                        <input type="hidden" name="week_start" value="<?php echo e($weekStart->toDateString()); ?>">
+                        <input type="hidden" name="week_end" value="<?php echo e($weekEnd->toDateString()); ?>">
 
                         <!-- DISPLAY -->
                         <div class="mb-2">
@@ -433,10 +440,10 @@
         </div>
     </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
     <script>
         document.addEventListener('click', function(e) {
 
@@ -529,9 +536,9 @@
 
         });
     </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@push('styles')
+<?php $__env->startPush('styles'); ?>
     <style>
         /* ===== Shipments-like UI ===== */
         .ui-card {
@@ -1377,4 +1384,6 @@
             }
         }
     </style>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.owner', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\HF-PC\Documents\TRUCKING-SYSTEM-master\TRUCKING-SYSTEM\resources\views/owner/payroll/index.blade.php ENDPATH**/ ?>

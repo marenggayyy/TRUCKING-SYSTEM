@@ -13,6 +13,61 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class PayrollController extends Controller
 {
+    public function update(Request $request)
+    {
+        $personType = $request->person_type;
+
+        foreach ($request->rows as $tripId => $rowData) {
+            $trip = DispatchTrip::with('helpers')->findOrFail($tripId);
+
+            $trip->manual_amount = $rowData['amount'];
+
+            if ($personType === 'helper') {
+                $helperCount = max($trip->helpers->count(), 1);
+
+                $trip->manual_allowance = $rowData['allowance'] * $helperCount;
+            } else {
+                $trip->manual_allowance = $rowData['allowance'];
+            }
+
+            $trip->save();
+        }
+
+        return redirect()
+            ->route('owner.payroll.index', [
+                'from' => $request->from,
+                'to' => $request->to,
+                'active_tab' => $request->active_tab,
+            ])
+            ->with('success', 'Payroll updated successfully.');
+    }
+
+    public function edit(Request $request)
+    {
+        $weekStart = $request->week_start;
+        $weekEnd = $request->week_end;
+
+        if ($request->person_type === 'driver') {
+            $rows = DispatchTrip::with('destination')
+                ->where('driver_id', $request->person_id)
+                ->whereBetween('dispatch_date', [$weekStart, $weekEnd])
+                ->get();
+        } else {
+            $rows = DispatchTrip::with(['destination', 'helpers'])
+                ->whereBetween('dispatch_date', [$weekStart, $weekEnd])
+                ->get()
+                ->filter(fn($trip) => $trip->helpers->contains('id', $request->person_id));
+        }
+
+        return view('owner.payroll.edit', [
+            'rows' => $rows,
+            'personType' => $request->person_type,
+            'personId' => $request->person_id,
+            'weekStart' => $weekStart,
+            'weekEnd' => $weekEnd,
+        ]);
+    }
+
     public function downloadPDF($type, $id)
     {
         $weekStart = request('week_start');
@@ -31,10 +86,12 @@ class PayrollController extends Controller
 
         // ✅ SAFE DEDUCTIONS
         $deductions = [
-            'advanced' => $payment ? $payment->balance_advance : 0,
+            'last_balance' => $payment ? $payment->advance_amount ?? 0 : 0,
+            'advance_deducted' => $payment ? $payment->advance_deducted ?? 0 : 0,
+            'remaining_balance' => $payment ? $payment->balance_advance ?? 0 : 0,
         ];
 
-        $netPay = $payment ? $payment->final_amount : $data['payroll_total'];
+        $netPay = $payment ? $payment->final_amount ?? 0 : $data['payroll_total'];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.myfile', [
             'p' => $data,
@@ -390,13 +447,16 @@ class PayrollController extends Controller
         $rows = $trips->map(function ($t) {
             $rate = (float) ($t->rate_snapshot ?? 0);
 
-            $allowance = $this->allowanceFromRate($rate);
+            $computedAmount = round($rate * 0.12, 2);
+            $computedAllowance = $this->allowanceFromRate($rate);
 
-            $amount = round($rate * 0.12, 2);
+            $amount = $t->manual_amount ?? $computedAmount;
+            $allowance = $t->manual_allowance ?? $computedAllowance;
 
             $totalSalary = round($amount + $allowance, 2);
 
             return [
+                'id' => $t->id,
                 'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
                 'location' => $t->destination->store_name ?? '-',
                 'rate' => $t->rate_snapshot,
@@ -439,12 +499,20 @@ class PayrollController extends Controller
 
                 $helperCount = max($t->helpers->count(), 1);
 
-                $amount = round(($rate * 0.1) / $helperCount, 2);
-                $allowance = round($this->allowanceFromRate($rate) / $helperCount, 2);
+                $computedAmount = round(($rate * 0.1) / $helperCount, 2);
+                $computedAllowance = round($this->allowanceFromRate($rate) / $helperCount, 2);
+
+                $amount = $t->manual_amount ?? $computedAmount;
+                if ($t->manual_allowance !== null) {
+                    $allowance = round($t->manual_allowance / $helperCount, 2);
+                } else {
+                    $allowance = $computedAllowance;
+                }
 
                 $totalSalary = round($amount + $allowance, 2);
 
                 $rows->push([
+                    'id' => $t->id,
                     'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
                     'location' => $t->destination->store_name ?? '-',
                     'rate' => $t->rate_snapshot,
@@ -529,18 +597,22 @@ class PayrollController extends Controller
             ->groupBy('driver_id')
             ->map(function ($group) use ($ledgers, $weekStart, $weekEnd) {
                 $driverId = (int) $group->first()->driver_id;
+                $latestBalanceAdvance = PayrollPersonLedger::where('person_type', 'driver')->where('person_id', $driverId)->latest('week_end')->value('advance_amount') ?? 0;
                 $name = optional($group->first()->driver)->name ?? 'Unknown Driver';
 
                 $rows = $group->map(function ($t) {
                     $rate = (float) ($t->rate_snapshot ?? 0);
 
-                    $allowance = $this->allowanceFromRate($rate);
+                    $computedAmount = round($rate * 0.12, 2);
+                    $computedAllowance = $this->allowanceFromRate($rate);
 
-                    $amount = round($rate * 0.12, 2);
+                    $amount = $t->manual_amount ?? $computedAmount;
+                    $allowance = $t->manual_allowance ?? $computedAllowance;
 
                     $totalSalary = round($amount + $allowance, 2);
 
                     return [
+                        'id' => $t->id,
                         'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
                         'location' => $t->destination->store_name ?? '-',
                         'rate' => $rate,
@@ -570,6 +642,8 @@ class PayrollController extends Controller
                     'name' => $name,
                     'rows' => $rows,
 
+                    'latest_balance_advance' => $latestBalanceAdvance,
+
                     'payroll_total' => $payrollTotal,
                     'paid_amount' => $paid,
                     'advance_amount' => $advance,
@@ -582,20 +656,26 @@ class PayrollController extends Controller
             ->values();
 
         // HELPERS (only trips with helper)
-        // HELPERS (only trips with helper)
         $helpersRows = $trips->flatMap(function ($t) {
             return $t->helpers->map(function ($h) use ($t) {
                 $rate = (float) ($t->rate_snapshot ?? 0);
 
                 $helperCount = max($t->helpers->count(), 1);
 
-                $amount = round(($rate * 0.1) / $helperCount, 2);
+                $computedAmount = round(($rate * 0.1) / $helperCount, 2);
+                $computedAllowance = round($this->allowanceFromRate($rate) / $helperCount, 2);
 
-                $allowance = round($this->allowanceFromRate($rate) / $helperCount, 2);
+                $amount = $t->manual_amount ?? $computedAmount;
+                if ($t->manual_allowance !== null) {
+                    $allowance = round($t->manual_allowance / $helperCount, 2);
+                } else {
+                    $allowance = $computedAllowance;
+                }
 
                 $totalSalary = round($amount + $allowance, 2);
 
                 return [
+                    'id' => $t->id,
                     'helper_id' => $h->id,
                     'helper_name' => $h->name,
                     'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
@@ -612,9 +692,10 @@ class PayrollController extends Controller
             ->groupBy('helper_id')
             ->map(function ($rows, $helperId) use ($ledgers, $weekStart, $weekEnd) {
                 $name = $rows->first()['helper_name'] ?? 'Unknown Helper';
-
+                $latestBalanceAdvance = PayrollPersonLedger::where('person_type', 'helper')->where('person_id', $helperId)->latest('week_end')->value('advance_amount') ?? 0;
                 $rowsOnly = $rows->map(
                     fn($r) => [
+                        'id' => $r['id'],
                         'date' => $r['date'],
                         'location' => $r['location'],
                         'rate' => $r['rate'],
@@ -639,6 +720,7 @@ class PayrollController extends Controller
                     'person_id' => (int) $helperId,
                     'name' => $name,
                     'rows' => $rowsOnly,
+                    'latest_balance_advance' => $latestBalanceAdvance,
                     'payroll_total' => $payrollTotal,
                     'paid_amount' => $paid,
                     'advance_amount' => $advance,
@@ -722,13 +804,16 @@ class PayrollController extends Controller
                         ->get();
 
                     $rows = collect();
-
+                    // DRIVER
                     foreach ($trips as $t) {
-                        // DRIVER
                         if ($type === 'driver' && $t->driver_id == $personId) {
                             $rate = (float) ($t->rate_snapshot ?? 0);
-                            $allowance = $this->allowanceFromRate($rate);
-                            $amount = round($rate * 0.12, 2);
+
+                            $computedAmount = round($rate * 0.12, 2);
+                            $computedAllowance = $this->allowanceFromRate($rate);
+
+                            $amount = $t->manual_amount ?? $computedAmount;
+                            $allowance = $t->manual_allowance ?? $computedAllowance;
 
                             $rows->push([
                                 'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
@@ -751,9 +836,15 @@ class PayrollController extends Controller
 
                                 $helperCount = max($t->helpers->count(), 1);
 
-                                $allowance = round($this->allowanceFromRate($rate) / $helperCount, 2);
+                                $computedAmount = round(($rate * 0.1) / $helperCount, 2);
+                                $computedAllowance = round($this->allowanceFromRate($rate) / $helperCount, 2);
 
-                                $amount = round(($rate * 0.1) / $helperCount, 2);
+                                $amount = $t->manual_amount ?? $computedAmount;
+                                if ($t->manual_allowance !== null) {
+                                    $allowance = round($t->manual_allowance / $helperCount, 2);
+                                } else {
+                                    $allowance = $computedAllowance;
+                                }
 
                                 $rows->push([
                                     'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
@@ -778,7 +869,9 @@ class PayrollController extends Controller
                     ->map(function ($p) use ($buildRows) {
                         $rows = $buildRows($p->person_id, 'driver');
 
-                        $advance = (float) ($p->balance_advance ?? 0);
+                        $advanceAmount = (float) ($p->advance_amount ?? 0);
+                        $advanceDeducted = (float) ($p->advance_deducted ?? 0);
+                        $balanceAdvance = (float) ($p->balance_advance ?? 0);
 
                         return [
                             'person_id' => $p->person_id,
@@ -790,10 +883,10 @@ class PayrollController extends Controller
                             'paid_amount' => $p->final_amount,
 
                             // ✅ DEDUCTIONS
-                            'advance' => $advance,
-                            'balance_advance_remaining' => $ledger->advance_amount ?? 0,
-                            'net_pay' => round(($p->amount ?? 0) - $advance, 2),
-                            
+                            'advance_amount' => $advanceAmount,
+                            'advance' => $advanceDeducted,
+                            'balance_advance_remaining' => $balanceAdvance,
+                            'net_pay' => (float) ($p->final_amount ?? 0),
 
                             'status' => 'PAID',
                         ];
@@ -808,7 +901,9 @@ class PayrollController extends Controller
                     ->map(function ($p) use ($buildRows) {
                         $rows = $buildRows($p->person_id, 'helper');
 
-                        $advance = (float) ($p->balance_advance ?? 0);
+                        $advanceAmount = (float) ($p->advance_amount ?? 0);
+                        $advanceDeducted = (float) ($p->advance_deducted ?? 0);
+                        $balanceAdvance = (float) ($p->balance_advance ?? 0);
 
                         return [
                             'person_id' => $p->person_id,
@@ -820,9 +915,10 @@ class PayrollController extends Controller
                             'paid_amount' => $p->final_amount,
 
                             // ✅ DEDUCTIONS
-                            'advance' => $advance,
-
-                            'net_pay' => round(($p->amount ?? 0) - $advance, 2),
+                            'advance_amount' => $advanceAmount,
+                            'advance' => $advanceDeducted,
+                            'balance_advance_remaining' => $balanceAdvance,
+                            'net_pay' => (float) ($p->final_amount ?? 0),
 
                             'status' => 'PAID',
                         ];
@@ -861,7 +957,7 @@ class PayrollController extends Controller
 
             if ($ledger) {
                 $ledger->paid_amount -= $payment->final_amount;
-                $ledger->advance_amount += $payment->balance_advance;
+                $ledger->advance_amount = $payment->advance_amount;
                 $ledger->save();
             }
 
@@ -880,7 +976,13 @@ class PayrollController extends Controller
             }
         });
 
-        return back()->with('success', 'Payroll payment deleted successfully.');
+        return redirect()
+            ->route('owner.payroll.history', [
+                'from' => request('from'),
+                'to' => request('to'),
+                'active_tab' => request('active_tab'),
+            ])
+            ->with('success', 'Payroll payment deleted successfully.');
     }
 
     private function updateTripPaymentStatus($trip)

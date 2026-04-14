@@ -14,10 +14,10 @@ class PayrollPayment extends Model
     'total_trips',
 
     'amount',
-    'bonus',
-    'balance_advance',
 
-    // ✅ ADD THESE
+    'advance_amount',
+    'advance_deducted',
+    'balance_advance',
 
     'final_amount',
     'payment_mode',

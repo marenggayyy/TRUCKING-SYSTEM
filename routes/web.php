@@ -59,7 +59,7 @@ Route::middleware(['auth', 'role:owner,it'])
 
         Route::get('/payroll/dashboard', [PayrollController::class, 'dashboard'])->name('payroll.dashboard');
         Route::get('/payroll/history', [PayrollController::class, 'history'])->name('payroll.history');
-        Route::get('/payroll/expenses', [PayrollController::class, 'expenses'])->name('payroll.expenses');
+        
     });
 
 /*
@@ -94,6 +94,8 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
         Route::delete('/helpers/{helper}', [HelperController::class, 'destroy'])->name('helpers.destroy');
 
         Route::delete('/people/bulk-delete', [DriverController::class, 'bulkDestroyPeople'])->name('people.bulkDestroy');
+
+        Route::get('/payroll/expenses', [PayrollController::class, 'expenses'])->name('payroll.expenses');
     });
 
 /*
@@ -149,6 +151,10 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
 
         Route::post('/trips/{id}/add-to-payroll', [PayrollController::class, 'addToPayroll'])->name('trips.addToPayroll');
         Route::put('/trips/{id}/billing-update', [PayrollController::class, 'updateBilling'])->name('trips.updateBilling');
+
+        Route::get('/payroll/edit', [PayrollController::class, 'edit'])->name('payroll.edit');
+
+        Route::post('/payroll/update', [PayrollController::class, 'update'])->name('payroll.update');
 
         Route::post('/payroll/pay', [PayrollPaymentController::class, 'store'])->name('payroll.pay');
         Route::post('/payroll/finalize', [PayrollController::class, 'finalizeWeek'])->name('payroll.finalize');

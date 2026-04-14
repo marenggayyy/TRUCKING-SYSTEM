@@ -23,14 +23,12 @@ class PayrollPaymentController extends Controller
             'amount' => 'required|numeric',
             'payment_mode' => 'required|string',
             'transaction_id' => 'nullable|string',
-            'advance_amount' => 'nullable|numeric|min:0',
             'balance_advance' => 'nullable|numeric|min:0',
+            'advance_deducted' => 'nullable|numeric|min:0',
         ]);
 
         DB::transaction(function () use ($data) {
-
-            $newAdvance = (float) ($data['advance_amount'] ?? 0);
-            $advanceDeducted = (float) ($data['balance_advance'] ?? 0);
+            $advanceDeducted = (float) ($data['advance_deducted'] ?? 0);
 
             /*
             |--------------------------------------------------------------------------
@@ -67,26 +65,24 @@ class PayrollPaymentController extends Controller
                     'advance_amount' => 0,
                     'notes' => null,
                     'updated_by' => Auth::id(),
-                ]
+                ],
             );
-
-            /*
-            |--------------------------------------------------------------------------
-            | APPLY NEW ADVANCE FIRST
-            |--------------------------------------------------------------------------
-            */
-            $ledger->advance_amount += $newAdvance;
 
             /*
             |--------------------------------------------------------------------------
             | VALIDATE DEDUCTION
             |--------------------------------------------------------------------------
             */
-            if ($advanceDeducted > $ledger->advance_amount) {
+            $advanceBalance = (float) ($data['balance_advance'] ?? 0);
+            $advanceDeducted = (float) ($data['advance_deducted'] ?? 0);
+
+            if ($advanceDeducted > $advanceBalance) {
                 throw ValidationException::withMessages([
-                    'balance_advance' => 'Advance deduction cannot exceed remaining advance balance.',
+                    'advance_deducted' => 'Advance deduction cannot exceed advance balance.',
                 ]);
             }
+
+            $remainingAdvance = max($advanceBalance - $advanceDeducted, 0);
 
             /*
             |--------------------------------------------------------------------------
@@ -100,7 +96,7 @@ class PayrollPaymentController extends Controller
             | UPDATE LEDGER
             |--------------------------------------------------------------------------
             */
-            $ledger->advance_amount -= $advanceDeducted;
+            $ledger->advance_amount = $remainingAdvance;
             $ledger->paid_amount += $finalAmount;
             $ledger->updated_by = Auth::id();
             $ledger->save();
@@ -117,7 +113,9 @@ class PayrollPaymentController extends Controller
                 'week_end' => $data['week_end'],
                 'total_trips' => $data['total_trips'],
                 'amount' => $data['amount'],
-                'balance_advance' => $advanceDeducted,
+                'advance_amount' => $advanceBalance,
+                'advance_deducted' => $advanceDeducted,
+                'balance_advance' => $remainingAdvance,
                 'final_amount' => $finalAmount,
                 'payment_mode' => $data['payment_mode'],
                 'transaction_id' => $data['transaction_id'] ?? null,
@@ -132,18 +130,11 @@ class PayrollPaymentController extends Controller
             */
             $trips = DispatchTrip::with(['helpers'])
                 ->where('status', 'Completed')
-                ->whereBetween('dispatch_date', [
-                    $data['week_start'],
-                    $data['week_end']
-                ])
+                ->whereBetween('dispatch_date', [$data['week_start'], $data['week_end']])
                 ->get();
 
             foreach ($trips as $trip) {
-
-                if (
-                    $data['person_type'] === 'driver' &&
-                    $trip->driver_id == $data['person_id']
-                ) {
+                if ($data['person_type'] === 'driver' && $trip->driver_id == $data['person_id']) {
                     DB::table('payroll_payment_trips')->insert([
                         'payroll_payment_id' => $payment->id,
                         'dispatch_trip_id' => $trip->id,
@@ -170,39 +161,16 @@ class PayrollPaymentController extends Controller
 
     private function updateTripPaymentStatus($trip)
     {
-        $driverPaid = DB::table('payroll_payments')
-            ->join(
-                'payroll_payment_trips',
-                'payroll_payments.id',
-                '=',
-                'payroll_payment_trips.payroll_payment_id'
-            )
-            ->where('dispatch_trip_id', $trip->id)
-            ->where('person_type', 'driver')
-            ->exists();
+        $driverPaid = DB::table('payroll_payments')->join('payroll_payment_trips', 'payroll_payments.id', '=', 'payroll_payment_trips.payroll_payment_id')->where('dispatch_trip_id', $trip->id)->where('person_type', 'driver')->exists();
 
         $helperIds = $trip->helpers->pluck('id');
 
-        $helpersPaidCount = DB::table('payroll_payments')
-            ->join(
-                'payroll_payment_trips',
-                'payroll_payments.id',
-                '=',
-                'payroll_payment_trips.payroll_payment_id'
-            )
-            ->where('dispatch_trip_id', $trip->id)
-            ->where('person_type', 'helper')
-            ->whereIn('person_id', $helperIds)
-            ->distinct()
-            ->count('person_id');
+        $helpersPaidCount = DB::table('payroll_payments')->join('payroll_payment_trips', 'payroll_payments.id', '=', 'payroll_payment_trips.payroll_payment_id')->where('dispatch_trip_id', $trip->id)->where('person_type', 'helper')->whereIn('person_id', $helperIds)->distinct()->count('person_id');
 
         $helpersTotal = $helperIds->count();
 
         $trip->update([
-            'payment_status' =>
-                ($driverPaid && $helpersPaidCount === $helpersTotal)
-                    ? 'Paid'
-                    : 'Unpaid',
+            'payment_status' => $driverPaid && $helpersPaidCount === $helpersTotal ? 'Paid' : 'Unpaid',
         ]);
     }
 }

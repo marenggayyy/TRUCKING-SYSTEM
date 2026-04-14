@@ -23,9 +23,7 @@
         "pestphp/pest": "^4.3",
         "pestphp/pest-plugin-laravel": "^4.0"
     },
-    "autoload": {
-        "files": ["app/Helpers/AuditTrailHelper.php"],
-        
+    "autoload": {     
         "psr-4": {
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
