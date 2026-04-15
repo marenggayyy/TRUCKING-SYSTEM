@@ -218,7 +218,8 @@
                                 <span class="item-name">Payroll</span>
                             </a>
                         </li>
-                       
+                        <?php endif; ?>
+                       <?php if(hasRole(['owner','it', 'secretary'])): ?>
 
                         <li class="nav-item">
                             <a class="nav-link <?php echo e(request()->routeIs('owner.payroll.expenses') ? 'active' : ''); ?>"

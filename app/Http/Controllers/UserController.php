@@ -31,10 +31,7 @@ class UserController extends Controller
             $plate = $truck->plate_number;
             $vehicleReports[] = [
                 'plate_number' => $plate,
-                'total_trips' => \DB::table('dispatch_trips')
-                    ->join('trucks', 'dispatch_trips.truck_id', '=', 'trucks.id')
-                    ->where('trucks.plate_number', $plate)
-                    ->count(),
+                'total_trips' => \DB::table('dispatch_trips')->join('trucks', 'dispatch_trips.truck_id', '=', 'trucks.id')->where('trucks.plate_number', $plate)->count(),
                 'total_fuel_cost' => \DB::table('expenses')->where('plate_number', $plate)->sum('debit'),
                 'total_fuel_liters' => \DB::table('expenses')->where('plate_number', $plate)->sum('liters'),
                 'total_maintenance_cost' => \DB::table('maintenance')->where('plate_number', $plate)->sum('cost'),
@@ -46,19 +43,14 @@ class UserController extends Controller
             ->join('trucks', 'dispatch_trips.truck_id', '=', 'trucks.id')
             ->join('drivers', 'dispatch_trips.driver_id', '=', 'drivers.id')
             ->join('destinations', 'dispatch_trips.destination_id', '=', 'destinations.id')
-            ->select(
-                'dispatch_trips.*',
-                'trucks.plate_number',
-                'drivers.name as driver_name',
-                'destinations.store_name as destination_name'
-            )
-            ->when($request->input('trip_plate_number'), function($q) use ($request) {
+            ->select('dispatch_trips.*', 'trucks.plate_number', 'drivers.name as driver_name', 'destinations.store_name as destination_name')
+            ->when($request->input('trip_plate_number'), function ($q) use ($request) {
                 $q->where('trucks.plate_number', $request->input('trip_plate_number'));
             })
-            ->when($request->input('trip_from'), function($q) use ($request) {
+            ->when($request->input('trip_from'), function ($q) use ($request) {
                 $q->where('dispatch_trips.dispatch_date', '>=', $request->input('trip_from'));
             })
-            ->when($request->input('trip_to'), function($q) use ($request) {
+            ->when($request->input('trip_to'), function ($q) use ($request) {
                 $q->where('dispatch_trips.dispatch_date', '<=', $request->input('trip_to'));
             })
             ->get();
@@ -74,13 +66,13 @@ class UserController extends Controller
 
         // Fuel Consumption Report
         $fuelQuery = \DB::table('expenses')
-            ->when($request->input('fuel_plate_number'), function($q) use ($request) {
+            ->when($request->input('fuel_plate_number'), function ($q) use ($request) {
                 $q->where('plate_number', $request->input('fuel_plate_number'));
             })
-            ->when($request->input('fuel_from'), function($q) use ($request) {
+            ->when($request->input('fuel_from'), function ($q) use ($request) {
                 $q->where('date', '>=', $request->input('fuel_from'));
             })
-            ->when($request->input('fuel_to'), function($q) use ($request) {
+            ->when($request->input('fuel_to'), function ($q) use ($request) {
                 $q->where('date', '<=', $request->input('fuel_to'));
             })
             ->get();
@@ -102,27 +94,24 @@ class UserController extends Controller
         }
         // Simple average consumption (liters per odometer diff)
         $averageConsumption = null;
-        if(count($totalLiters) && count($totalOdo)) {
-            $averageConsumption = 'Avg: ' . round(array_sum($totalLiters)/max(array_sum($totalOdo),1), 4) . ' liters/km';
+        if (count($totalLiters) && count($totalOdo)) {
+            $averageConsumption = 'Avg: ' . round(array_sum($totalLiters) / max(array_sum($totalOdo), 1), 4) . ' liters/km';
         }
 
-        return view('users.reports', compact(
-            'maintenanceCount', 'lastMaintenance', 'tripCount', 'lastTripDate', 'fuelLogCount', 'lastFuelEntry',
-            'vehicleReports', 'tripReports', 'fuelReports', 'plateNumbers', 'totalFuelCost', 'averageConsumption'
-        ));
+        return view('users.reports', compact('maintenanceCount', 'lastMaintenance', 'tripCount', 'lastTripDate', 'fuelLogCount', 'lastFuelEntry', 'vehicleReports', 'tripReports', 'fuelReports', 'plateNumbers', 'totalFuelCost', 'averageConsumption'));
     }
-    
+
     public function index(Request $request)
     {
         $search = $request->input('search');
 
         $users = User::when($search, function ($query) use ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('role', 'like', "%{$search}%");
-                });
-            })
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('role', 'like', "%{$search}%");
+            });
+        })
             ->latest()
             ->get();
 
@@ -136,35 +125,21 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-
         $validated = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
-            'role'     => ['required', 'in:owner,admin,secretary,it'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'role' => ['required', 'in:owner,admin,secretary,it'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-       $user = User::create([
-    'name'     => $validated['name'],
-    'email'    => $validated['email'],
-    'role'     => $validated['role'],
-    'password' => Hash::make($validated['password']),
-]);
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'role' => $validated['role'],
+            'password' => Hash::make($validated['password']),
+        ]);
 
-$newData = $user->toArray();
-unset($newData['password']);
-
-audit_log(
-    'created',
-    'Created user: ' . $user->name,
-    $user,
-    null,
-    $newData
-);
-
-        return redirect()
-            ->route('owner.users.index')
-            ->with('success', 'User created successfully.');
+        return redirect()->route('owner.users.index')->with('success', 'User created successfully.');
     }
 
     public function edit(User $user)
@@ -173,77 +148,45 @@ audit_log(
     }
 
     public function update(Request $request, User $user)
-{
-    $validated = $request->validate([
-        'name'     => ['required', 'string', 'max:255'],
-        'email'    => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
-        'role'     => ['required', 'in:owner,admin,secretary,it'],
-        'password' => ['nullable', 'confirmed', Password::defaults()],
-    ]);
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'role' => ['required', 'in:owner,admin,secretary,it'],
+            'password' => ['nullable', 'confirmed', Password::defaults()],
+        ]);
 
-    // ✅ GET OLD DATA (ADD THIS)
-    $oldData = $user->getOriginal();
+        // ✅ GET OLD DATA (ADD THIS)
 
-    if (
-        $validated['role'] === 'owner' &&
-        User::where('role', 'owner')->where('id', '!=', $user->id)->exists()
-    ) {
-        return back()
-            ->withErrors(['role' => 'Owner account already exists.'])
-            ->withInput();
+        if ($validated['role'] === 'owner' && User::where('role', 'owner')->where('id', '!=', $user->id)->exists()) {
+            return back()
+                ->withErrors(['role' => 'Owner account already exists.'])
+                ->withInput();
+        }
+
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->role = $validated['role'];
+
+        if (!empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
+        }
+
+        $user->save();
+
+        // ✅ REMOVE PASSWORD FROM NEW DATA (optional but clean)
+
+        return redirect()->route('owner.users.index')->with('success', 'User updated successfully.');
     }
 
-    $user->name  = $validated['name'];
-    $user->email = $validated['email'];
-    $user->role  = $validated['role'];
+    public function destroy(User $user)
+    {
+        if ($user->role === 'owner') {
+            return back()->withErrors(['role' => 'Owner account cannot be deleted.']);
+        }
+        
+        $user->delete();
 
-    if (!empty($validated['password'])) {
-        $user->password = Hash::make($validated['password']);
+        return redirect()->route('owner.users.index')->with('success', 'User deleted successfully.');
     }
-
-    $user->save();
-
-    // ✅ REMOVE PASSWORD FROM NEW DATA (optional but clean)
-    $newData = $user->toArray();
-    unset($newData['password']);
-
-    // ✅ AUDIT LOG (ADD THIS AFTER SAVE)
-    audit_log(
-        'updated',
-        'Updated user: ' . $user->name,
-        $user,
-        $oldData,
-        $newData
-    );
-
-    return redirect()
-        ->route('owner.users.index')
-        ->with('success', 'User updated successfully.');
-}
-
-   public function destroy(User $user)
-{
-    if ($user->role === 'owner') {
-        return back()->withErrors(['role' => 'Owner account cannot be deleted.']);
-    }
-
-    // ✅ GET OLD DATA BEFORE DELETE
-    $oldData = $user->toArray();
-    unset($oldData['password']);
-
-    // ✅ AUDIT LOG (BEFORE DELETE)
-    audit_log(
-        'deleted',
-        'Deleted user: ' . $user->name,
-        $user,
-        $oldData,
-        null
-    );
-
-    $user->delete();
-
-    return redirect()
-        ->route('owner.users.index')
-        ->with('success', 'User deleted successfully.');
-}
 }

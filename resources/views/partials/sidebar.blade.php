@@ -218,7 +218,8 @@
                                 <span class="item-name">Payroll</span>
                             </a>
                         </li>
-                       
+                        @endif
+                       @if(hasRole(['owner','it', 'secretary']))
 
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('owner.payroll.expenses') ? 'active' : '' }}"

@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'Expenses'); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -1851,4 +1849,4 @@ document.addEventListener('change', function (e) {
     </style>
 <?php $__env->stopPush(); ?>
 
-<?php echo $__env->make('layouts.owner', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\HF-PC\Downloads\last zip\laravel_app\resources\views/owner/payroll/expenses.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('layouts.owner', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\HF-PC\Documents\TRUCKING-SYSTEM-master\TRUCKING-SYSTEM\resources\views/owner/payroll/expenses.blade.php ENDPATH**/ ?>

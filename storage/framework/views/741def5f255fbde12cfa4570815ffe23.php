@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'Users'); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -1090,4 +1088,4 @@
     </style>
 <?php $__env->stopPush(); ?>
 
-<?php echo $__env->make('layouts.owner', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /home/u649672793/domains/gray-spoonbill-292506.hostingersite.com/laravel_app/resources/views/users/index.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('layouts.owner', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\HF-PC\Documents\TRUCKING-SYSTEM-master\TRUCKING-SYSTEM\resources\views/users/index.blade.php ENDPATH**/ ?>
