@@ -956,26 +956,34 @@
                             @method('PUT')
 
                             <div class="modal-body">
-                                <div class="mb-3 text-center">
-                                    <label class="form-label d-block">Profile Picture</label>
+                                <div class="mb-3">
+                                    <label class="form-label d-block text-center">Profile Picture</label>
 
-                                    {{-- CURRENT IMAGE --}}
-                                    <div class="mb-2">
-                                        @if ($driver->profile_photo)
-                                            <img src="{{ asset('storage/' . $driver->profile_photo) }}" alt="Profile"
-                                                class="rounded-circle border"
-                                                style="width: 200px; height: 200px; object-fit: cover;">
-                                        @else
-                                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center border"
-                                                style="width: 200px; height: 200px;">
-                                                <span class="text-muted small">No Image</span>
-                                            </div>
-                                        @endif
+                                    {{-- IMAGE (centered) --}}
+                                    <div class="text-center mb-2">
+                                        <div class="circle-wrapper">
+                                            <img id="cropper-driver-{{ $driver->id }}"
+                                                src="{{ $driver->profile_photo ? asset('storage/' . $driver->profile_photo) : asset('assets/images/page-img/14.png') }}">
+                                        </div>
                                     </div>
 
-                                    {{-- FILE INPUT --}}
-                                    <label class="form-label">Change Profile Picture</label>
-                                    <input type="file" name="profile_photo" class="form-control">
+                                    {{-- CONTROLS (left aligned) --}}
+                                    <div class="text-start">
+
+                                        @if ($driver->profile_photo)
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" name="remove_photo"
+                                                    value="1">
+                                                <label class="form-check-label text-danger">
+                                                    Remove current picture
+                                                </label>
+                                            </div>
+                                        @endif
+
+                                        <label class="form-label">Change Profile Picture</label>
+                                        <input type="file" name="profile_photo" class="form-control photo-input"
+                                            data-target="cropper-driver-{{ $driver->id }}">
+                                    </div>
                                 </div>
 
                                 <div class="mb-3">
@@ -1058,27 +1066,36 @@
                             @method('PUT')
 
                             <div class="modal-body">
-                                <div class="mb-3 text-center">
-                                    <label class="form-label d-block">Profile Picture</label>
+                                <div class="mb-3">
+                                    <label class="form-label d-block text-center">Profile Picture</label>
 
-                                    {{-- CURRENT IMAGE --}}
-                                    <div class="mb-2">
-                                        @if ($helper->profile_photo)
-                                            <img src="{{ asset('storage/' . $helper->profile_photo) }}" alt="Profile"
-                                                class="rounded-circle border"
-                                                style="width: 200px; height: 200px; object-fit: cover;">
-                                        @else
-                                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center border"
-                                                style="width: 200px; height: 200px;">
-                                                <span class="text-muted small">No Image</span>
-                                            </div>
-                                        @endif
+                                    {{-- IMAGE (centered) --}}
+                                    <div class="text-center mb-2">
+                                        <div class="circle-wrapper">
+                                            <img id="cropper-{{ $helper->id }}"
+                                                src="{{ $helper->profile_photo ? asset('storage/' . $helper->profile_photo) : asset('assets/images/page-img/14.png') }}">
+                                        </div>
                                     </div>
 
-                                    {{-- FILE INPUT --}}
-                                    <label class="form-label">Change Profile Picture</label>
-                                    <input type="file" name="profile_photo" class="form-control">
+                                    {{-- CONTROLS --}}
+                                    <div class="text-start">
+
+                                        @if ($helper->profile_photo)
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" name="remove_photo"
+                                                    value="1">
+                                                <label class="form-check-label text-danger">
+                                                    Remove current picture
+                                                </label>
+                                            </div>
+                                        @endif
+
+                                        <label class="form-label">Change Profile Picture</label>
+                                        <input type="file" name="profile_photo" class="form-control photo-input"
+                                            data-target="cropper-{{ $helper->id }}">
+                                    </div>
                                 </div>
+
                                 <div class="mb-3">
                                     <label class="form-label">Name</label>
                                     <input class="form-control" name="name" value="{{ $helper->name }}" required>
@@ -1184,6 +1201,7 @@
 
 @push('scripts')
     <script>
+
         document.addEventListener('DOMContentLoaded', () => {
             // =========================
             // 1) Add Person Modal action switch
@@ -1493,6 +1511,69 @@
                 }
             });
         });
+
+        const croppers = {};
+
+        document.querySelectorAll('.photo-input').forEach(input => {
+
+            input.addEventListener('change', function(e) {
+
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const id = this.dataset.target;
+                const img = document.getElementById(id);
+
+                if (!img) return;
+
+                const reader = new FileReader();
+
+                reader.onload = function(event) {
+                    // 🔥 instant preview inside circle
+                    img.src = event.target.result;
+                };
+
+                reader.readAsDataURL(file);
+            });
+
+        });
+
+        document.querySelectorAll('[id^="editHelperModal-"]').forEach(modal => {
+
+            modal.addEventListener('shown.bs.modal', function() {
+
+                const img = modal.querySelector('[id^="cropper-"]');
+                if (!img) return;
+
+                const id = img.id;
+
+                // destroy if already exists
+                if (croppers[id]) {
+                    croppers[id].destroy();
+                }
+
+                croppers[id] = new Cropper(img, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 1,
+                    background: false,
+                    guides: false,
+                    cropBoxMovable: false,
+                    cropBoxResizable: false,
+                    zoomable: true,
+                    movable: true
+                });
+
+                // scroll zoom (FB feel)
+                img.addEventListener('wheel', function(e) {
+                    e.preventDefault();
+                    croppers[id].zoom(e.deltaY > 0 ? -0.1 : 0.1);
+                });
+
+            });
+
+        });
     </script>
 @endpush
 
@@ -1559,8 +1640,8 @@
         }
 
         /* =========================================================
-                                                                                                                                                                                                                                                                                     MOBILE PERSON CARDS (Drivers/Helpers) - CENTRED LAYOUT
-                                                                                                                                                                                                                                                                                    ========================================================= */
+                                                                                                                                                                                                                                                                                                                                                                                                             MOBILE PERSON CARDS (Drivers/Helpers) - CENTRED LAYOUT
+                                                                                                                                                                                                                                                                                                                                                                                                            ========================================================= */
 
         .ui-mobile-person--centered {
             border-radius: 18px;
@@ -1798,6 +1879,27 @@
                 padding: .42rem .7rem;
             }
 
+        }
+
+        .circle-wrapper {
+            width: 200px;
+            height: 200px;
+            margin: auto;
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid #ddd;
+        }
+
+        .circle-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: grab;
+        }
+
+        .circle-wrapper img:active {
+            cursor: grabbing;
         }
     </style>
 @endpush

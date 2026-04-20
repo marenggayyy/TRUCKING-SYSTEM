@@ -180,8 +180,17 @@ class DriverController extends Controller
             $data['availability_status'] = $driver->availability_status;
         }
 
+        // REMOVE PHOTO (checkbox)
+        // REMOVE PHOTO
+        if ($request->boolean('remove_photo') && $driver->profile_photo) {
+            if (Storage::disk('public')->exists($driver->profile_photo)) {
+                Storage::disk('public')->delete($driver->profile_photo);
+            }
+            $data['profile_photo'] = null;
+        }
+
+        // UPLOAD NEW PHOTO (overrides remove if both present)
         if ($request->hasFile('profile_photo')) {
-            // delete old photo
             if ($driver->profile_photo && Storage::disk('public')->exists($driver->profile_photo)) {
                 Storage::disk('public')->delete($driver->profile_photo);
             }

@@ -144,7 +144,7 @@
                                         </div>
                                         <h5
                                             class="mb-1 
-    <?php echo e($todayData['profit'] >= 0 ? 'text-success' : 'text-danger'); ?>">
+                                            <?php echo e($todayData['profit'] >= 0 ? 'text-success' : 'text-danger'); ?>">
                                             ₱<?php echo e(number_format($todayData['profit'] ?? 0, 2)); ?>
 
                                         </h5>

@@ -50,16 +50,27 @@ class HelperController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
-            'email' => 'nullable|email|max:255|unique:helpers,email',
-            'status' => 'nullable|in:active,inactive,on-leave',
-            'profile_photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'status' => 'required|string',
+
+            // ADD THESE
+            'birthday' => 'nullable|date',
+            'contact_number' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:1000',
+            'emergency_contact_person' => 'nullable|string|max:255',
+            'emergency_contact_number' => 'nullable|string|max:50',
         ]);
 
         $data = [
             'name' => $request->name,
-            'email' => $request->email ?? null,
-            'status' => $request->status ?? 'active',
+            'email' => $request->email,
+            'status' => $request->status,
+            'birthday' => $request->birthday,
+            'contact_number' => $request->contact_number,
+            'address' => $request->address,
+            'emergency_contact_person' => $request->emergency_contact_person,
+            'emergency_contact_number' => $request->emergency_contact_number,
         ];
 
         $status = $request->status ?? 'active';
@@ -91,6 +102,13 @@ class HelperController extends Controller
             'email' => 'nullable|email|max:255|unique:helpers,email,' . $helper->id . ',id',
             'status' => 'nullable|in:active,inactive,on-leave',
             'profile_photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+
+            // 🔥 SAME AS DRIVER
+            'birthday' => 'nullable|date',
+            'contact_number' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:1000',
+            'emergency_contact_person' => 'nullable|string|max:255',
+            'emergency_contact_number' => 'nullable|string|max:50',
         ]);
 
         $status = $request->status ?? $helper->status;
@@ -99,8 +117,16 @@ class HelperController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'status' => $status,
+
+            // 🔥 SAME AS DRIVER
+            'birthday' => $request->birthday,
+            'contact_number' => $request->contact_number,
+            'address' => $request->address,
+            'emergency_contact_person' => $request->emergency_contact_person,
+            'emergency_contact_number' => $request->emergency_contact_number,
         ];
 
+        // 🔥 SAME AVAILABILITY LOGIC
         if ($status === 'inactive') {
             $data['availability_status'] = 'unavailable';
         } elseif ($status === 'on-leave') {
@@ -109,6 +135,15 @@ class HelperController extends Controller
             $data['availability_status'] = $helper->availability_status;
         }
 
+        // 🔥 COPY FROM DRIVER (REMOVE PHOTO)
+        if ($request->boolean('remove_photo') && $helper->profile_photo) {
+            if (Storage::disk('public')->exists($helper->profile_photo)) {
+                Storage::disk('public')->delete($helper->profile_photo);
+            }
+            $data['profile_photo'] = null;
+        }
+
+        // 🔥 COPY FROM DRIVER (UPLOAD PHOTO)
         if ($request->hasFile('profile_photo')) {
             if ($helper->profile_photo && Storage::disk('public')->exists($helper->profile_photo)) {
                 Storage::disk('public')->delete($helper->profile_photo);
@@ -127,6 +162,4 @@ class HelperController extends Controller
         $helper->delete();
         return back()->with('success', 'Helper deleted.');
     }
-
-   
 }
