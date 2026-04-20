@@ -140,24 +140,27 @@
 
     <div class="header">
         <div class="title">PAYSLIP</div>
+        <div class="company">Your Company Name</div>
         <div class="company">
             Payroll Period:
-            {{ \Carbon\Carbon::parse($weekStart)->format('M d') }} –
-            {{ \Carbon\Carbon::parse($weekEnd)->format('M d, Y') }}
+            <?php echo e(\Carbon\Carbon::parse($weekStart)->format('M d')); ?> –
+            <?php echo e(\Carbon\Carbon::parse($weekEnd)->format('M d, Y')); ?>
+
         </div>
     </div>
 
     <table class="info-box">
         <tr>
-            <td><strong>Name:</strong> {{ $p['name'] }}</td>
+            <td><strong>Name:</strong> <?php echo e($p['name']); ?></td>
             <td>
                 <strong>Type:</strong>
-                {{ $p['person_type'] === 'helper' ? 'Helper' : 'Driver' }}
+                <?php echo e($p['person_type'] === 'helper' ? 'Helper' : 'Driver'); ?>
+
             </td>
         </tr>
         <tr>
-            <td><strong>Total Trips:</strong> {{ count($p['rows']) }}</td>
-            <td><strong>Generated:</strong> {{ now()->format('M d, Y h:i A') }}</td>
+            <td><strong>Total Trips:</strong> <?php echo e(count($p['rows'])); ?></td>
+            <td><strong>Generated:</strong> <?php echo e(now()->format('M d, Y h:i A')); ?></td>
         </tr>
     </table>
 
@@ -172,41 +175,41 @@
             <th>TOTAL</th>
         </tr>
 
-        @foreach ($p['rows'] as $r)
+        <?php $__currentLoopData = $p['rows']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $r): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <tr>
-                <td>{{ $r['date'] }}</td>
-                <td>{{ $r['location'] }}</td>
-                <td>{{ number_format($r['amount'] ?? 0, 2) }}</td>
-                <td>{{ number_format($r['allowance'] ?? 0, 2) }}</td>
-                <td><strong>{{ number_format($r['total_salary'] ?? 0, 2) }}</strong></td>
+                <td><?php echo e($r['date']); ?></td>
+                <td><?php echo e($r['location']); ?></td>
+                <td><?php echo e(number_format($r['amount'] ?? 0, 2)); ?></td>
+                <td><?php echo e(number_format($r['allowance'] ?? 0, 2)); ?></td>
+                <td><strong><?php echo e(number_format($r['total_salary'] ?? 0, 2)); ?></strong></td>
             </tr>
-        @endforeach
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </table>
 
     <table class="summary-table">
         <tr>
             <td>Total Income</td>
-            <td>₱ {{ number_format($p['payroll_total'], 2) }}</td>
+            <td>₱ <?php echo e(number_format($p['payroll_total'], 2)); ?></td>
         </tr>
 
         <tr>
             <td>Last Balance</td>
-            <td>₱ {{ number_format($deductions['last_balance'] ?? 0, 2) }}</td>
+            <td>₱ <?php echo e(number_format($deductions['last_balance'] ?? 0, 2)); ?></td>
         </tr>
 
         <tr>
             <td>Advance Deduction</td>
-            <td>₱ {{ number_format($deductions['advance_deducted'] ?? 0, 2) }}</td>
+            <td>₱ <?php echo e(number_format($deductions['advance_deducted'] ?? 0, 2)); ?></td>
         </tr>
 
         <tr>
             <td>Remaining Advance Balance</td>
-            <td>₱ {{ number_format($deductions['remaining_balance'] ?? 0, 2) }}</td>
+            <td>₱ <?php echo e(number_format($deductions['remaining_balance'] ?? 0, 2)); ?></td>
         </tr>
 
         <tr class="net-pay">
             <td>NET PAY</td>
-            <td>₱ {{ number_format($netPay, 2) }}</td>
+            <td>₱ <?php echo e(number_format($netPay, 2)); ?></td>
         </tr>
     </table>
 
@@ -226,3 +229,4 @@
 </body>
 
 </html>
+<?php /**PATH C:\Users\HF-PC\Downloads\last zip\laravel_app\resources\views/pdf/myfile.blade.php ENDPATH**/ ?>

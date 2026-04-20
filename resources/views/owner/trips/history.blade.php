@@ -130,8 +130,8 @@
                                     <th>Truck</th>
                                     <th>People</th>
                                     <th>Status</th>
-                                    <th>Dispatched At</th>
                                     <th>Billing</th>
+                                    <th>Check Release Date</th>
                                     <th>Payment</th>
                                     <th class="text-center">Action</th>
                                 </tr>
@@ -201,22 +201,27 @@
                                             </span>
                                         </td>
 
-                                        <td class="text-muted">
-                                            {{ $t->dispatched_at ? $t->dispatched_at->format('Y-m-d h:i A') : '-' }}
-                                        </td>
-
                                         <td>
 
                                             <button type="button" class="btn p-0 billing-toggle"
                                                 data-url="{{ route('owner.trips.updateBilling', $t->id) }}">
 
                                                 <span
-                                                    class="badge {{ $t->billing_status == 'Billed' ? 'bg-success' : 'bg-secondary' }}">
+                                                    class="badge
+                                                        {{ $t->billing_status == 'Billed'
+                                                            ? 'bg-success'
+                                                            : ($t->billing_status == 'Pending'
+                                                                ? 'bg-warning text-dark'
+                                                                : 'bg-secondary') }}">
                                                     {{ $t->billing_status }}
                                                 </span>
 
                                             </button>
 
+                                        </td>
+
+                                        <td>
+                                            {{ $t->check_release_date ? $t->check_release_date->format('Y-m-d') : '-' }}
                                         </td>
 
                                         <td>
@@ -243,27 +248,25 @@
 
                                         <td class="text-center d-flex justify-content-center gap-1">
 
-    @if(in_array(auth()->user()->role, ['owner', 'it']))
-        <form action="{{ route('owner.trips.destroy', $t->id) }}"
-              method="POST"
-              onsubmit="return confirm('Delete this trip?')">
-            @csrf
-            @method('DELETE')
+                                            @if (in_array(auth()->user()->role, ['owner', 'it']))
+                                                <form action="{{ route('owner.trips.destroy', $t->id) }}" method="POST"
+                                                    onsubmit="return confirm('Delete this trip?')">
+                                                    @csrf
+                                                    @method('DELETE')
 
-            <button type="submit" class="btn btn-sm btn-outline-danger">
-                <i class="bi bi-trash"></i>
-            </button>
-        </form>
-    @endif
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
 
-    <button type="button"
-        class="btn btn-sm btn-outline-primary"
-        data-bs-toggle="modal"
-        data-bs-target="#editBillingModal{{ $t->id }}">
-        <i class="bi bi-pencil"></i>
-    </button>
+                                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editBillingModal{{ $t->id }}">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
 
-</td>
+                                        </td>
 
                                     </tr>
 
@@ -287,49 +290,49 @@
                             </tbody>
 
                         </table>
-                        
+
 
                     </div>
                 </div>
 
                 {{-- ✅ MODALS HERE --}}
-@foreach($trips as $t)
-<div class="modal fade" id="editBillingModal{{ $t->id }}">
-    <div class="modal-dialog">
-       <form method="POST" action="{{ route('owner.trips.updateBilling', $t->id) }}">
-    @csrf
-    @method('PUT')
+                @foreach ($trips as $t)
+                    <div class="modal fade" id="editBillingModal{{ $t->id }}">
+                        <div class="modal-dialog">
+                            <form method="POST" action="{{ route('owner.trips.updateBilling', $t->id) }}">
+                                @csrf
+                                @method('PUT')
 
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5>Edit Billing</h5>
-                </div>
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5>Edit Billing</h5>
+                                    </div>
 
-                <div class="modal-body">
-                    <input type="date" name="check_release_date"
-                        value="{{ $t->check_release_date }}" class="form-control mb-2">
+                                    <div class="modal-body">
+                                        <input type="date" name="check_release_date"
+                                            value="{{ $t->check_release_date }}" class="form-control mb-2">
 
-                    <input type="text" name="bank_name"
-                        value="{{ $t->bank_name }}" class="form-control mb-2" placeholder="Bank Name">
+                                        <input type="text" name="bank_name" value="{{ $t->bank_name }}"
+                                            class="form-control mb-2" placeholder="Bank Name">
 
-                    <input type="text" name="check_number"
-                        value="{{ $t->check_number }}" class="form-control" placeholder="Check #">
-                </div>
+                                        <input type="text" name="check_number" value="{{ $t->check_number }}"
+                                            class="form-control" placeholder="Check #">
+                                    </div>
 
-                <div class="modal-footer">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-        Cancel
-    </button>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                            Cancel
+                                        </button>
 
-    <button type="submit" class="btn btn-primary">
-        Save
-    </button>
-</div>
-            </div>
-        </form>
-    </div>
-</div>
-@endforeach
+                                        <button type="submit" class="btn btn-primary">
+                                            Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                @endforeach
             </div>
 
             <div class="card-footer bg-transparent border-0">
@@ -343,17 +346,17 @@
         </div>
 
     </div>
-    
-    
+
+
 
 @endsection
 
 @push('styles')
     <style>
-    body.modal-open .ui-card {
-    transform: none !important;
-}
-    
+        body.modal-open .ui-card {
+            transform: none !important;
+        }
+
         /* ===== Shipments-like UI ===== */
         .ui-card {
             border-radius: 18px;

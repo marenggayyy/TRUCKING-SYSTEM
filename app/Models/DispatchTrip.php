@@ -32,6 +32,7 @@ class DispatchTrip extends Model
     }
     protected $casts = [
         'dispatch_date' => 'date',
+        'check_release_date' => 'date',
         'dispatched_at' => 'datetime',
         'completed_at' => 'datetime',
     ];

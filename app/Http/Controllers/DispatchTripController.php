@@ -95,13 +95,13 @@ class DispatchTripController extends Controller
         $trips = $tripsQuery
             ->orderByRaw(
                 "
-        CASE
-    WHEN status = 'Draft' THEN 1
-    WHEN status = 'Dispatched' THEN 2
-    WHEN status = 'Completed' THEN 3
-    WHEN status = 'Cancelled' THEN 4
-END
-    ",
+                    CASE
+                WHEN status = 'Draft' THEN 1
+                WHEN status = 'Dispatched' THEN 2
+                WHEN status = 'Completed' THEN 3
+                WHEN status = 'Cancelled' THEN 4
+                    END
+                    ",
             )
             ->orderByDesc('dispatch_date')
             ->paginate($perPage)
@@ -406,15 +406,46 @@ END
         return back();
     }
 
-    public function history()
+    public function history(Request $request)
     {
-        $trips = DispatchTrip::with(['destination', 'truck', 'driver', 'helpers'])
-            ->whereIn('status', ['Completed', 'Cancelled'])
-            ->latest()
-            ->paginate(10);
+        $q = $request->get('q');
+
+        $tripsQuery = DispatchTrip::with(['destination', 'truck', 'driver', 'helpers'])->whereIn('status', ['Completed', 'Cancelled']);
+
+        // 🔥 SEARCH
+        if ($q) {
+            $tripsQuery->where(function ($w) use ($q) {
+                $w->where('trip_ticket_no', 'like', "%{$q}%")
+
+                    // ✅ ADD THIS (check release date)
+                    ->orWhereDate('check_release_date', $q)
+
+                    // (optional fallback if user types partial like "2026-04")
+                    ->orWhere('check_release_date', 'like', "%{$q}%")
+
+                    ->orWhereHas('destination', function ($d) use ($q) {
+                        $d->where('store_name', 'like', "%{$q}%")->orWhere('store_code', 'like', "%{$q}%");
+                    })
+
+                    ->orWhereHas('truck', function ($t) use ($q) {
+                        $t->where('plate_number', 'like', "%{$q}%");
+                    })
+
+                    ->orWhereHas('driver', function ($dr) use ($q) {
+                        $dr->where('name', 'like', "%{$q}%");
+                    })
+
+                    ->orWhereHas('helpers', function ($h) use ($q) {
+                        $h->where('name', 'like', "%{$q}%");
+                    });
+            });
+        }
+
+        $perPage = (int) $request->get('per_page', 10);
+
+        $trips = $tripsQuery->latest()->paginate($perPage)->withQueryString();
 
         foreach ($trips as $trip) {
-            // driver paid check (same logic as billing history)
             $driverPaid = DB::table('payroll_payments')->where('person_type', 'driver')->where('person_id', $trip->driver_id)->whereDate('week_start', '<=', $trip->dispatch_date)->whereDate('week_end', '>=', $trip->dispatch_date)->exists();
 
             $helperIds = $trip->helpers->pluck('id');
@@ -424,7 +455,6 @@ END
             $helpersTotal = $helperIds->count();
 
             if ($helpersTotal === 0) {
-                // driver only trip
                 $trip->computed_payment_status = $driverPaid ? 'Paid' : 'Unpaid';
             } else {
                 if ($driverPaid && $helpersPaidCount === $helpersTotal) {
