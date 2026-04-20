@@ -383,6 +383,34 @@
                                     </div>
 
                                     <div class="mb-3">
+                                        <label class="form-label">Birthday</label>
+                                        <input type="date" name="birthday" class="form-control">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Contact Number</label>
+                                        <input type="text" name="contact_number" class="form-control"
+                                            placeholder="09XXXXXXXXX">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Address</label>
+                                        <textarea name="address" class="form-control" rows="2" placeholder="Complete address"></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Emergency Contact Person</label>
+                                        <input type="text" name="emergency_contact_person" class="form-control"
+                                            placeholder="Full name">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Emergency Contact Number</label>
+                                        <input type="text" name="emergency_contact_number" class="form-control"
+                                            placeholder="09XXXXXXXXX">
+                                    </div>
+
+                                    <div class="mb-3">
                                         <label class="form-label">Status</label>
                                         <select name="status" class="form-select" required>
                                             <option value="active">Active</option>
@@ -562,6 +590,7 @@
                                                 <th>Availability</th>
                                                 <th style="width: 120px;">Action</th>
                                             </tr>
+
                                         </thead>
 
                                         <tbody>
@@ -623,6 +652,12 @@
                                                     <td>
                                                         <div class="d-flex gap-1">
 
+                                                            <button class="btn btn-sm btn-light toggle-details"
+                                                                data-id="driver-<?php echo e($driver->id); ?>"
+                                                                onclick="event.stopPropagation()">
+                                                                &lt;
+                                                            </button>
+
                                                             
                                                             <button class="btn btn-sm btn-warning" data-bs-toggle="modal"
                                                                 data-bs-target="#editDriverModal-<?php echo e($driver->id); ?>">
@@ -639,7 +674,30 @@
 
                                                         </div>
                                                     </td>
+
                                                 </tr>
+                                                <tr class="details-row d-none" id="driver-<?php echo e($driver->id); ?>-details">
+                                                    <td colspan="6">
+                                                        <div class="p-3 bg-light rounded">
+
+                                                            <div><strong>📱 Contact:</strong>
+                                                                <?php echo e($driver->contact_number ?? '-'); ?></div>
+                                                            <div><strong>📍 Address:</strong> <?php echo e($driver->address ?? '-'); ?>
+
+                                                            </div>
+                                                            <div><strong>🎂 Birthday:</strong>
+                                                                <?php echo e($driver->birthday?->format('M d, Y') ?? '-'); ?></div>
+                                                            <div>
+                                                                <strong>🚨 Emergency:</strong>
+                                                                <?php echo e($driver->emergency_contact_person ?? '-'); ?>
+
+                                                                (<?php echo e($driver->emergency_contact_number ?? '-'); ?>)
+                                                            </div>
+
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
 
                                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                                 <tr>
@@ -827,6 +885,12 @@
                                                     <td>
                                                         <div class="d-flex gap-1">
 
+                                                            <button class="btn btn-sm btn-light toggle-details"
+                                                                data-id="helper-<?php echo e($helper->id); ?>"
+                                                                onclick="event.stopPropagation()">
+                                                                &lt;
+                                                            </button>
+
                                                             
                                                             <button class="btn btn-sm btn-warning" data-bs-toggle="modal"
                                                                 data-bs-target="#editHelperModal-<?php echo e($helper->id); ?>">
@@ -844,6 +908,35 @@
                                                         </div>
                                                     </td>
 
+                                                </tr>
+                                                <tr class="details-row d-none" id="helper-<?php echo e($helper->id); ?>-details">
+                                                    <td colspan="6">
+                                                        <div class="p-3 bg-light rounded">
+
+                                                            <div><strong>📱 Contact:</strong>
+                                                                <?php echo e($helper->contact_number ?? '-'); ?>
+
+                                                            </div>
+
+                                                            <div><strong>📍 Address:</strong>
+                                                                <?php echo e($helper->address ?? '-'); ?>
+
+                                                            </div>
+
+                                                            <div><strong>🎂 Birthday:</strong>
+                                                                <?php echo e($helper->birthday ? \Carbon\Carbon::parse($helper->birthday)->format('M d, Y') : '-'); ?>
+
+                                                            </div>
+
+                                                            <div>
+                                                                <strong>🚨 Emergency:</strong>
+                                                                <?php echo e($helper->emergency_contact_person ?? '-'); ?>
+
+                                                                (<?php echo e($helper->emergency_contact_number ?? '-'); ?>)
+                                                            </div>
+
+                                                        </div>
+                                                    </td>
                                                 </tr>
 
                                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
@@ -864,6 +957,7 @@
         </div>
 
         
+
         <?php $__currentLoopData = $drivers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $driver): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <div class="modal fade" id="editDriverModal-<?php echo e($driver->id); ?>" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-md modal-dialog-centered">
@@ -911,6 +1005,35 @@
                                     <label class="form-label">Email</label>
                                     <input type="email" class="form-control" name="email"
                                         value="<?php echo e($driver->email); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Birthday</label>
+                                    <input type="date" name="birthday" class="form-control"
+                                        value="<?php echo e($driver->birthday?->format('Y-m-d')); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Contact Number</label>
+                                    <input type="text" class="form-control" name="contact_number"
+                                        value="<?php echo e($driver->contact_number); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Address</label>
+                                    <textarea class="form-control" name="address" rows="2"><?php echo e($driver->address); ?></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Emergency Contact Person</label>
+                                    <input type="text" class="form-control" name="emergency_contact_person"
+                                        value="<?php echo e($driver->emergency_contact_person); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Emergency Contact Number</label>
+                                    <input type="text" class="form-control" name="emergency_contact_number"
+                                        value="<?php echo e($driver->emergency_contact_number); ?>">
                                 </div>
 
                                 <div class="mb-3">
@@ -983,6 +1106,35 @@
                                     <label class="form-label">Email</label>
                                     <input type="email" class="form-control" name="email"
                                         value="<?php echo e($helper->email); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Birthday</label>
+                                    <input type="date" name="birthday" class="form-control"
+                                        value="<?php echo e($helper->birthday); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Contact Number</label>
+                                    <input type="text" class="form-control" name="contact_number"
+                                        value="<?php echo e($helper->contact_number); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Address</label>
+                                    <textarea class="form-control" name="address" rows="2"><?php echo e($helper->address); ?></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Emergency Contact Person</label>
+                                    <input type="text" class="form-control" name="emergency_contact_person"
+                                        value="<?php echo e($helper->emergency_contact_person); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Emergency Contact Number</label>
+                                    <input type="text" class="form-control" name="emergency_contact_number"
+                                        value="<?php echo e($helper->emergency_contact_number); ?>">
                                 </div>
 
                                 <div class="mb-3">
@@ -1297,54 +1449,67 @@
                     div.classList.add('mb-3');
 
                     div.innerHTML = `
-    <label class="fw-bold">${doc}</label>
+                        <label class="fw-bold">${doc}</label>
 
-    <div class="mb-1">
-        ${file 
-            ? `<a href="/storage/${file}" target="_blank" class="small text-primary">View File</a>` 
-            : '<span class="small text-muted">No file</span>'}
-    </div>
+                        <div class="mb-1">
+                            ${file 
+                                ? `<a href="/storage/${file}" target="_blank" class="small text-primary">View File</a>` 
+                                : '<span class="small text-muted">No file</span>'}
+                        </div>
 
-    <div class="row">
-        <div class="col-md-6">
-            <input type="date" 
-                name="expiry[${doc}]" 
-                class="form-control"
-                value="${expiry}">
-
-            <div class="form-check mt-1">
-                <input type="checkbox" 
-                    name="delete_expiry[${doc}]" 
-                    value="1"
-                    class="form-check-input">
-                <label class="form-check-label small text-danger">
-                    Delete Expiry
-                </label>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <input type="file" 
-                name="file[${doc}]" 
-                class="form-control">
-
-            <div class="form-check mt-1">
-                <input type="checkbox" 
-                    name="delete_file[${doc}]" 
-                    value="1"
-                    class="form-check-input">
-                <label class="form-check-label small text-danger">
-                    Delete File
-                </label>
-            </div>
-        </div>
-    </div>
-`;
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="date" 
+                                    name="expiry[${doc}]" 
+                                    class="form-control"
+                                    value="${expiry}">
+                            
+                                <div class="form-check mt-1">
+                                    <input type="checkbox" 
+                                        name="delete_expiry[${doc}]" 
+                                        value="1"
+                                        class="form-check-input">
+                                    <label class="form-check-label small text-danger">
+                                        Delete Expiry
+                                    </label>
+                                </div>
+                            </div>
+                        
+                            <div class="col-md-6">
+                                <input type="file" 
+                                    name="file[${doc}]" 
+                                    class="form-control">
+                            
+                                <div class="form-check mt-1">
+                                    <input type="checkbox" 
+                                        name="delete_file[${doc}]" 
+                                        value="1"
+                                        class="form-check-input">
+                                    <label class="form-check-label small text-danger">
+                                        Delete File
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    `;
 
                     container.appendChild(div);
                 });
             }
 
+        });
+
+        document.querySelectorAll('.toggle-details').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+
+                const id = this.dataset.id;
+                const details = document.getElementById(id + '-details');
+
+                if (details) {
+                    details.classList.toggle('d-none');
+                }
+            });
         });
     </script>
 <?php $__env->stopPush(); ?>
@@ -1412,8 +1577,8 @@
         }
 
         /* =========================================================
-                                                                                                                                                                                             MOBILE PERSON CARDS (Drivers/Helpers) - CENTRED LAYOUT
-                                                                                                                                                                                            ========================================================= */
+                                                                                                                                                                                                                                                                                     MOBILE PERSON CARDS (Drivers/Helpers) - CENTRED LAYOUT
+                                                                                                                                                                                                                                                                                    ========================================================= */
 
         .ui-mobile-person--centered {
             border-radius: 18px;

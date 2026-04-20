@@ -104,18 +104,28 @@ class DriverController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
-            'email' => 'nullable|email|max:255|unique:drivers,email',
-            'status' => 'nullable|in:active,inactive,on-leave',
-            'profile_photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'status' => 'required|string',
+            'birthday' => 'nullable|date',
+            'contact_number' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:1000',
+            'emergency_contact_person' => 'nullable|string|max:255',
+            'emergency_contact_number' => 'nullable|string|max:50',
         ]);
 
         $status = $request->status ?? 'active';
 
         $data = [
             'name' => $request->name,
-            'email' => $request->email ?? null,
-            'status' => $status,
+            'email' => $request->email,
+            'status' => $request->status,
+            'birthday' => $request->birthday,
+            'contact_number' => $request->contact_number,
+            'address' => $request->address,
+            'emergency_contact_person' => $request->emergency_contact_person,
+            'emergency_contact_number' => $request->emergency_contact_number,
+            'profile_photo' => $path ?? null,
         ];
 
         if ($status === 'inactive') {
@@ -153,7 +163,12 @@ class DriverController extends Controller
         $data = [
             'name' => $request->name,
             'email' => $request->email,
-            'status' => $status,
+            'status' => $request->status,
+            'birthday' => $request->birthday,
+            'contact_number' => $request->contact_number,
+            'address' => $request->address,
+            'emergency_contact_person' => $request->emergency_contact_person,
+            'emergency_contact_number' => $request->emergency_contact_number,
         ];
 
         // 🔥 AUTO FORCE AVAILABILITY
@@ -205,5 +220,4 @@ class DriverController extends Controller
 
         return back()->with('success', 'Selected records deleted.');
     }
-
 }
