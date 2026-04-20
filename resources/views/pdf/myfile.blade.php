@@ -168,7 +168,6 @@
         <tr>
             <th>DATE</th>
             <th>DESTINATION</th>
-            <th>RATE</th>
             <th>AMOUNT</th>
             <th>ALLOWANCE</th>
             <th>TOTAL</th>
@@ -178,7 +177,6 @@
             <tr>
                 <td>{{ $r['date'] }}</td>
                 <td>{{ $r['location'] }}</td>
-                <td>{{ number_format($r['rate'] ?? 0, 2) }}</td>
                 <td>{{ number_format($r['amount'] ?? 0, 2) }}</td>
                 <td>{{ number_format($r['allowance'] ?? 0, 2) }}</td>
                 <td><strong>{{ number_format($r['total_salary'] ?? 0, 2) }}</strong></td>

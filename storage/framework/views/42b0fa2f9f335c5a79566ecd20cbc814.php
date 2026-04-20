@@ -1,8 +1,8 @@
-@extends('layouts.owner')
 
-@section('title', 'Payroll Dashboard')
 
-@section('content')
+<?php $__env->startSection('title', 'Payroll Dashboard'); ?>
+
+<?php $__env->startSection('content'); ?>
 
     <div class="container-fluid py-4">
 
@@ -19,14 +19,14 @@
                 <div class="d-flex gap-2">
 
                     <a class="btn btn-outline-secondary"
-                        href="{{ route('owner.payroll.index', [
+                        href="<?php echo e(route('owner.payroll.index', [
                             'from' => request('from'),
                             'to' => request('to'),
-                        ]) }}">
+                        ])); ?>">
                         → Payroll
                     </a>
 
-                    <a class="btn btn-outline-secondary" href="{{ route('owner.payroll.history') }}">
+                    <a class="btn btn-outline-secondary" href="<?php echo e(route('owner.payroll.history')); ?>">
                         → History
                     </a>
 
@@ -34,56 +34,60 @@
             </div>
         </div>
 
-        {{-- Payroll Summary (Indicators) --}}
+        
         <div class="row g-3 mb-4">
 
-            {{-- Trips Ready --}}
+            
             <div class="col-12 col-md-6 col-lg-3 d-flex">
                 <div class="card ui-card border-0 ui-indicator ui-indicator-primary ui-kpi-card h-80 w-100"
                     style="margin-bottom: 0px;">
                     <div class="card-body text-center ui-kpi-body">
                         <div class="ui-kpi-label">Trips Ready 🚚</div>
                         <div class="ui-kpi-number text-primary">
-                            {{ $pendingTrips }}
+                            <?php echo e($pendingTrips); ?>
+
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- Drivers --}}
+            
             <div class="col-12 col-md-6 col-lg-3 d-flex">
                 <div class="card ui-card border-0 ui-indicator ui-indicator-success ui-kpi-card h-80 w-100"
                     style="margin-bottom: 0px;">
                     <div class="card-body text-center ui-kpi-body">
                         <div class="ui-kpi-label">Drivers to Pay 👨‍✈️</div>
                         <div class="ui-kpi-number text-success">
-                            {{ $drivers }}
+                            <?php echo e($drivers); ?>
+
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- Helpers --}}
+            
             <div class="col-12 col-md-6 col-lg-3 d-flex">
                 <div class="card ui-card border-0 ui-indicator ui-indicator-primary ui-kpi-card h-80 w-100"
                     style="margin-bottom: 0px;">
                     <div class="card-body text-center ui-kpi-body">
                         <div class="ui-kpi-label">Helpers to Pay 👷</div>
                         <div class="ui-kpi-number text-primary">
-                            {{ $helpers }}
+                            <?php echo e($helpers); ?>
+
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- Payroll Total --}}
+            
             <div class="col-12 col-md-6 col-lg-3 d-flex">
                 <div class="card ui-card border-0 ui-indicator ui-indicator-warning ui-kpi-card h-80 w-100"
                     style="margin-bottom: 0px;">
                     <div class="card-body text-center ui-kpi-body">
                         <div class="ui-kpi-label">Payroll Total 💰</div>
                         <div class="ui-kpi-number text-warning">
-                            ₱ {{ number_format($overallTotal ?? 0, 2) }}
+                            ₱ <?php echo e(number_format($overallTotal ?? 0, 2)); ?>
+
                         </div>
                     </div>
                 </div>
@@ -93,7 +97,7 @@
 
         <div class="row mt-4">
 
-            {{-- LEFT SIDE : PAYROLL QUEUE --}}
+            
             <div class="col-lg-8">
 
                 <div class="card shadow-sm border-0 h-80">
@@ -105,16 +109,17 @@
                             <div class="queue-title">
                                 <h5 class="mb-1 fw-semibold">Payroll Queue</h5>
                                 <div class="queue-range">
-                                    {{ $from->format('M d, Y') }} – {{ $to->format('M d, Y') }}
+                                    <?php echo e($from->format('M d, Y')); ?> – <?php echo e($to->format('M d, Y')); ?>
+
                                 </div>
                             </div>
 
                             <form method="GET" class="queue-filter">
 
-                                <input type="date" name="from" value="{{ request('from') }}"
+                                <input type="date" name="from" value="<?php echo e(request('from')); ?>"
                                     class="form-control form-control-sm">
 
-                                <input type="date" name="to" value="{{ request('to') }}"
+                                <input type="date" name="to" value="<?php echo e(request('to')); ?>"
                                     class="form-control form-control-sm">
 
                                 <button class="btn btn-sm btn-primary">
@@ -141,29 +146,29 @@
 
                                 <tbody>
 
-                                    @forelse($queue as $q)
+                                    <?php $__empty_1 = true; $__currentLoopData = $queue; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $q): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                                         <tr>
-                                            <td>{{ $q['name'] }}</td>
-                                            <td>{{ $q['role'] }}</td>
-                                            <td>{{ $q['trips'] }}</td>
-                                            <td>₱ {{ number_format($q['amount'], 2) }}</td>
+                                            <td><?php echo e($q['name']); ?></td>
+                                            <td><?php echo e($q['role']); ?></td>
+                                            <td><?php echo e($q['trips']); ?></td>
+                                            <td>₱ <?php echo e(number_format($q['amount'], 2)); ?></td>
                                             <td>
-                                                @if ($q['status'] === 'Paid')
+                                                <?php if($q['status'] === 'Paid'): ?>
                                                     <span class="badge bg-success">Paid</span>
-                                                @else
+                                                <?php else: ?>
                                                     <span class="badge bg-warning">Pending</span>
-                                                @endif
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
 
-                                    @empty
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
 
                                         <tr>
                                             <td colspan="5" class="text-center text-muted">
                                                 No employees waiting for payroll.
                                             </td>
                                         </tr>
-                                    @endforelse
+                                    <?php endif; ?>
 
                                 </tbody>
 
@@ -178,7 +183,7 @@
             </div>
 
 
-            {{-- RIGHT SIDE : ALLOWANCE SETTINGS --}}
+            
             <div class="col-lg-4">
 
                 <div class="card shadow-sm border-0 h-80">
@@ -192,8 +197,8 @@
                             </button>
                         </div>
 
-                        <form method="POST" action="{{ route('owner.allowances.update') }}">
-                            @csrf
+                        <form method="POST" action="<?php echo e(route('owner.allowances.update')); ?>">
+                            <?php echo csrf_field(); ?>
 
                             <div class="table-responsive">
 
@@ -210,22 +215,22 @@
 
                                     <tbody id="allowanceTable">
 
-                                        @foreach ($ranges as $r)
+                                        <?php $__currentLoopData = $ranges; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $r): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                             <tr>
 
                                                 <td>
                                                     <input type="number" class="form-control form-control-sm"
-                                                        name="rate_from[]" value="{{ $r->rate_from }}">
+                                                        name="rate_from[]" value="<?php echo e($r->rate_from); ?>">
                                                 </td>
 
                                                 <td>
                                                     <input type="number" class="form-control form-control-sm"
-                                                        name="rate_to[]" value="{{ $r->rate_to }}">
+                                                        name="rate_to[]" value="<?php echo e($r->rate_to); ?>">
                                                 </td>
 
                                                 <td>
                                                     <input type="number" class="form-control form-control-sm"
-                                                        name="allowance[]" value="{{ $r->allowance }}">
+                                                        name="allowance[]" value="<?php echo e($r->allowance); ?>">
                                                 </td>
 
                                                 <td>
@@ -235,7 +240,7 @@
                                                 </td>
 
                                             </tr>
-                                        @endforeach
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
                                     </tbody>
 
@@ -275,14 +280,14 @@
 
                 <div class="tab-content">
 
-                    {{-- 🚛 DRIVER TAB --}}
+                    
                     <div class="tab-pane fade show active" id="driverTab">
 
-                        @foreach ($driversPayroll as $plate)
+                        <?php $__currentLoopData = $driversPayroll; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $plate): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="mb-4 border rounded p-3">
 
                                 <div class="fw-bold mb-2 text-primary">
-                                    🚛 Plate: {{ $plate['plate'] }} ({{ $plate['truck_type'] }})
+                                    🚛 Plate: <?php echo e($plate['plate']); ?> (<?php echo e($plate['truck_type']); ?>)
                                 </div>
 
                                 <div class="table-responsive">
@@ -301,26 +306,28 @@
                                         </thead>
 
                                         <tbody>
-                                            @foreach ($plate['rows'] as $row)
+                                            <?php $__currentLoopData = $plate['rows']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                 <tr>
-                                                    <td>{{ $row['date'] }}</td>
-                                                    <td>{{ $row['location'] }}</td>
-                                                    <td>{{ $row['driver'] }}</td>
-                                                    <td>{{ number_format($row['rate'], 2) }}</td>
-                                                    <td>{{ number_format($row['amount'], 2) }}</td>
-                                                    <td>{{ number_format($row['allowance'], 2) }}</td>
+                                                    <td><?php echo e($row['date']); ?></td>
+                                                    <td><?php echo e($row['location']); ?></td>
+                                                    <td><?php echo e($row['driver']); ?></td>
+                                                    <td><?php echo e(number_format($row['rate'], 2)); ?></td>
+                                                    <td><?php echo e(number_format($row['amount'], 2)); ?></td>
+                                                    <td><?php echo e(number_format($row['allowance'], 2)); ?></td>
                                                     <td class="fw-bold text-end">
-                                                        {{ number_format($row['total_salary'], 2) }}
+                                                        <?php echo e(number_format($row['total_salary'], 2)); ?>
+
                                                     </td>
                                                 </tr>
-                                            @endforeach
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </tbody>
 
                                         <tfoot>
                                             <tr>
                                                 <th colspan="6" class="text-end">TOTAL</th>
                                                 <th class="text-end">
-                                                    ₱ {{ number_format($plate['payroll_total'], 2) }}
+                                                    ₱ <?php echo e(number_format($plate['payroll_total'], 2)); ?>
+
                                                 </th>
                                             </tr>
                                         </tfoot>
@@ -329,18 +336,18 @@
                                 </div>
 
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
                     </div>
 
-                    {{-- 👷 HELPER TAB --}}
+                    
                     <div class="tab-pane fade" id="helperTab">
 
-                        @foreach ($helpersPayroll as $helper)
+                        <?php $__currentLoopData = $helpersPayroll; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $helper): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="mb-4 border rounded p-3">
 
                                 <div class="fw-bold mb-2 text-success">
-                                    👷 Plate: {{ $helper['plate'] }} ({{ $helper['truck_type'] }})
+                                    👷 Plate: <?php echo e($helper['plate']); ?> (<?php echo e($helper['truck_type']); ?>)
                                 </div>
 
                                 <div class="table-responsive">
@@ -359,26 +366,28 @@
                                         </thead>
 
                                         <tbody>
-                                            @foreach ($helper['rows'] as $row)
+                                            <?php $__currentLoopData = $helper['rows']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                 <tr>
-                                                    <td>{{ $row['date'] }}</td>
-                                                    <td>{{ $row['location'] }}</td>
-                                                    <td>{{ $row['helper'] }}</td>
-                                                    <td>{{ number_format($row['rate'], 2) }}</td>
-                                                    <td>{{ number_format($row['amount'], 2) }}</td>
-                                                    <td>{{ number_format($row['allowance'], 2) }}</td>
+                                                    <td><?php echo e($row['date']); ?></td>
+                                                    <td><?php echo e($row['location']); ?></td>
+                                                    <td><?php echo e($row['helper']); ?></td>
+                                                    <td><?php echo e(number_format($row['rate'], 2)); ?></td>
+                                                    <td><?php echo e(number_format($row['amount'], 2)); ?></td>
+                                                    <td><?php echo e(number_format($row['allowance'], 2)); ?></td>
                                                     <td class="fw-bold text-end">
-                                                        {{ number_format($row['total_salary'], 2) }}
+                                                        <?php echo e(number_format($row['total_salary'], 2)); ?>
+
                                                     </td>
                                                 </tr>
-                                            @endforeach
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </tbody>
 
                                         <tfoot>
                                             <tr>
                                                 <th colspan="6" class="text-end">TOTAL</th>
                                                 <th class="text-end">
-                                                    ₱ {{ number_format($helper['payroll_total'], 2) }}
+                                                    ₱ <?php echo e(number_format($helper['payroll_total'], 2)); ?>
+
                                                 </th>
                                             </tr>
                                         </tfoot>
@@ -387,7 +396,7 @@
                                 </div>
 
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
                     </div>
 
@@ -398,9 +407,9 @@
         </div>
     </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('styles')
+<?php $__env->startPush('styles'); ?>
     <style>
         /* ===== Shipments-like UI ===== */
         .ui-card {
@@ -1165,9 +1174,9 @@
 
         }
     </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
     <script>
         document.getElementById('addRowBtn').addEventListener('click', function() {
 
@@ -1207,4 +1216,6 @@
 
         });
     </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.owner', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\HF-PC\Downloads\last zip\laravel_app\resources\views/owner/payroll/dashboard.blade.php ENDPATH**/ ?>

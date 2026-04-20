@@ -263,100 +263,122 @@ class PayrollController extends Controller
 
         $trips = DispatchTrip::with(['destination', 'truck', 'driver', 'helpers'])
             ->where('status', 'Completed')
-            ->whereDate('dispatch_date', '>=', $from)
-            ->whereDate('dispatch_date', '<=', $to)
+            ->whereBetween('dispatch_date', [$from, $to])
             ->get();
 
         $queue = collect();
 
-        // Drivers
-        $driversTrips = $trips->groupBy('driver_id');
+        // =========================
+        // 🚛 DRIVER QUEUE + PAYROLL
+        // =========================
 
-        foreach ($driversTrips as $driverId => $group) {
-            $name = optional($group->first()->driver)->name;
+        $platePayroll = $trips->groupBy(function ($t) {
+            return optional($t->truck)->plate_number ?? 'NO PLATE';
+        });
 
-            $amount = $group->sum(function ($t) {
-                $rate = $t->rate_snapshot ?? 0;
+        $driversPayroll = $platePayroll
+            ->map(function ($group, $plate) {
+                $rows = $group->map(function ($t) {
+                    $rate = (float) ($t->rate_snapshot ?? 0);
 
-                $salary = $rate * 0.12;
-                $allowance = $this->allowanceFromRate($rate);
+                    $amount = $t->manual_amount ?? round($rate * 0.12, 2);
+                    $allowance = $t->manual_allowance ?? $this->allowanceFromRate($rate);
 
-                return $salary + $allowance;
-            });
+                    return [
+                        'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
+                        'location' => $t->destination->store_name ?? '-',
+                        'driver' => optional($t->driver)->name ?? 'N/A',
+                        'rate' => $rate,
+                        'amount' => $amount,
+                        'allowance' => $allowance,
+                        'total_salary' => round($amount + $allowance, 2),
+                    ];
+                });
 
-            $driverPaid = DB::table('payroll_payments')->where('person_type', 'driver')->where('person_id', $driverId)->whereDate('week_start', $from)->whereDate('week_end', $to)->exists();
+                return [
+                    'plate' => $plate,
 
-            if ($driverPaid) {
-                continue;
-            }
+                    // ✅ ADD THIS LINE (FIX)
+                    'truck_type' => optional($group->first()->truck)->truck_type ?? 'N/A',
 
+                    'rows' => $rows,
+                    'payroll_total' => round($rows->sum('total_salary'), 2),
+                ];
+            })
+            ->values();
+
+        // =========================
+        // 👷 HELPER PAYROLL
+        // =========================
+
+        $helpersByPlate = $trips->groupBy(function ($t) {
+            return optional($t->truck)->plate_number ?? 'NO PLATE';
+        });
+
+        $helpersPayroll = $helpersByPlate
+            ->map(function ($group, $plate) {
+                $rows = collect();
+
+                foreach ($group as $t) {
+                    foreach ($t->helpers as $h) {
+                        $rate = (float) ($t->rate_snapshot ?? 0);
+                        $count = max($t->helpers->count(), 1);
+
+                        $amount = $t->manual_amount ?? round(($rate * 0.1) / $count, 2);
+
+                        if ($t->manual_allowance !== null) {
+                            $allowance = round($t->manual_allowance / $count, 2);
+                        } else {
+                            $allowance = round($this->allowanceFromRate($rate) / $count, 2);
+                        }
+
+                        $rows->push([
+                            'helper' => $h->name,
+                            'date' => Carbon::parse($t->dispatch_date)->format('Y-m-d'),
+                            'location' => $t->destination->store_name ?? '-',
+                            'rate' => $rate,
+                            'amount' => $amount,
+                            'allowance' => $allowance,
+                            'total_salary' => round($amount + $allowance, 2),
+                        ]);
+                    }
+                }
+
+                return [
+                    'plate' => $plate,
+                    'truck_type' => optional($group->first()->truck)->truck_type ?? 'N/A',
+                    'rows' => $rows,
+                    'payroll_total' => round($rows->sum('total_salary'), 2),
+                ];
+            })
+            ->values();
+
+        // =========================
+        // 📊 QUEUE SUMMARY
+        // =========================
+        foreach ($driversPayroll as $d) {
             $queue->push([
-                'person_key' => 'driver_' . $driverId,
-                'person_id' => $driverId,
-                'name' => $name,
+                'name' => 'Plate: ' . $d['plate'] . ' (' . $d['truck_type'] . ')',
                 'role' => 'Driver',
-                'trips' => $group->count(),
-                'amount' => round($amount, 2),
+                'trips' => count($d['rows']),
+                'amount' => $d['payroll_total'],
                 'status' => 'Pending',
             ]);
         }
 
-        // Helpers
-        $helpersTrips = collect();
-
-        foreach ($trips as $t) {
-            foreach ($t->helpers as $h) {
-                $helpersTrips->push([
-                    'helper_id' => $h->id,
-                    'helper_name' => $h->name,
-                    'trip' => $t,
-                ]);
-            }
-        }
-
-        $helpersGrouped = $helpersTrips->groupBy('helper_id');
-
-        foreach ($helpersGrouped as $helperId => $items) {
-            $name = $items->first()['helper_name'];
-
-            $amount = $items->sum(function ($row) {
-                $trip = $row['trip'];
-                $rate = $trip->rate_snapshot ?? 0;
-
-                $helperCount = max($trip->helpers->count(), 1);
-
-                $salary = ($rate * 0.1) / $helperCount;
-                $allowance = $this->allowanceFromRate($rate) / $helperCount;
-
-                return round($salary + $allowance, 2);
-            });
-
-            $helperPaid = DB::table('payroll_payments')->where('person_type', 'helper')->where('person_id', $helperId)->whereDate('week_start', $from)->whereDate('week_end', $to)->exists();
-
-            if ($helperPaid) {
-                continue; // skip paid helpers
-            }
-
+        foreach ($helpersPayroll as $h) {
             $queue->push([
-                'person_key' => 'helper_' . $helperId,
-                'person_id' => $helperId,
-                'name' => $name,
+                'name' => 'Plate: ' . $h['plate'] . ' (' . $h['truck_type'] . ')',
                 'role' => 'Helper',
-                'trips' => $items->count(),
-                'amount' => round($amount, 2),
+                'trips' => count($h['rows']),
+                'amount' => $h['payroll_total'],
                 'status' => 'Pending',
             ]);
         }
 
-        $pendingTrips = DispatchTrip::whereBetween('dispatch_date', [$from, $to])
-            ->where('status', 'Completed')
-            ->where('payment_status', '!=', 'Paid')
-            ->distinct('trip_ticket_no')
-            ->count('trip_ticket_no');
-
-        $drivers = $queue->where('role', 'Driver')->count();
-
-        $helpers = $queue->where('role', 'Helper')->count();
+        $pendingTrips = $trips->count();
+        $drivers = $driversPayroll->count();
+        $helpers = $helpersPayroll->count();
         $overallTotal = $queue->sum('amount');
 
         $ranges = AllowanceRange::orderBy('rate_from')->get();
@@ -369,7 +391,9 @@ class PayrollController extends Controller
             'overallTotal' => $overallTotal,
             'from' => Carbon::parse($from),
             'to' => Carbon::parse($to),
-            'ranges' => $ranges, // ✅ ADD THIS
+            'ranges' => $ranges,
+            'driversPayroll' => $driversPayroll,
+            'helpersPayroll' => $helpersPayroll,
         ]);
     }
 
