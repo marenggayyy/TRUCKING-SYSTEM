@@ -28,6 +28,7 @@ class TruckController extends Controller
             'plate_number' => 'required|string|unique:trucks,plate_number',
             'truck_type' => 'required|in:L300,6W',
             'status' => 'required|in:active,inactive',
+            'company_number' => 'nullable|string|max:20',
         ]);
 
         Truck::create($validated);
@@ -100,6 +101,7 @@ class TruckController extends Controller
             'plate_number' => 'required|string|unique:trucks,plate_number,' . $truck->id,
             'truck_type' => 'required|in:L300,6W',
             'status' => 'required|in:active,inactive',
+            'company_number' => 'nullable|string|max:20',
         ]);
 
         $truck->update($validated);

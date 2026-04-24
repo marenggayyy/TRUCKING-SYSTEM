@@ -88,6 +88,11 @@
                             </div>
 
                             <div class="mb-3">
+                                <label class="form-label fw-semibold">Company Contact No.</label>
+                                <input class="form-control" name="company_number" placeholder="e.g. 09171234567">
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label fw-semibold">Truck Type</label>
                                 <select class="form-select" name="truck_type" required>
                                     <option value="" disabled selected>Select type</option>
@@ -191,6 +196,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Plate Number</th>
+                                                <th>Company #</th>
                                                 <th>Status</th>
                                                 <th class="text-end">Actions</th>
                                             </tr>
@@ -204,6 +210,16 @@
 
                                                 <tr>
                                                     <td class="fw-semibold">{{ $truck->plate_number }}</td>
+
+                                                    <td>
+                                                        @if ($truck->company_number)
+                                                            <a href="tel:{{ $truck->company_number }}">
+                                                                {{ $truck->company_number }}
+                                                            </a>
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
 
                                                     <td>
                                                         <span
@@ -308,6 +324,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Plate Number</th>
+                                                <th>Company #</th>
                                                 <th>Status</th>
                                                 <th class="text-end">Actions</th>
                                             </tr>
@@ -319,6 +336,16 @@
 
                                                 <tr>
                                                     <td class="fw-semibold">{{ $truck->plate_number }}</td>
+
+                                                    <td>
+                                                        @if ($truck->company_number)
+                                                            <a href="tel:{{ $truck->company_number }}">
+                                                                {{ $truck->company_number }}
+                                                            </a>
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
 
                                                     <td>
                                                         <span
@@ -532,6 +559,12 @@
                             </div>
 
                             <div class="mb-3">
+                                <label class="form-label fw-semibold">Company Contact No.</label>
+                                <input class="form-control" name="company_number" value="{{ $truck->company_number }}"
+                                    placeholder="e.g. 09171234567">
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label fw-semibold">Truck
                                     Type</label>
                                 <select class="form-select" name="truck_type" required>
@@ -588,6 +621,12 @@
                                     Number</label>
                                 <input class="form-control" name="plate_number" value="{{ $truck->plate_number }}"
                                     required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Company Contact No.</label>
+                                <input class="form-control" name="company_number" value="{{ $truck->company_number }}"
+                                    placeholder="e.g. 09171234567">
                             </div>
 
                             <div class="mb-3">

@@ -571,25 +571,6 @@ class PayrollController extends Controller
         return $range ? (float) $range->allowance : 0;
     }
 
-    // private function statusFromBalance(float $payrollTotal, float $paid, float $advance): string
-    // {
-    //     if ($payrollTotal <= 0) {
-    //         return 'NO TRIPS';
-    //     }
-
-    //     $balance = round($payrollTotal - $paid - $advance, 2);
-
-    //     if ($balance <= 0 && $paid + $advance > 0) {
-    //         return $balance < 0 ? 'OVERPAID' : 'PAID';
-    //     }
-
-    //     if ($paid + $advance > 0) {
-    //         return 'PARTIAL';
-    //     }
-
-    //     return 'UNPAID';
-    // }
-
     private function buildKey(string $type, int $id): string
     {
         return $type . ':' . $id;
@@ -1038,18 +1019,23 @@ class PayrollController extends Controller
             $creditsQuery->whereYear('date', $year)->whereMonth('date', $month);
         }
 
-        $expenses = $expensesQuery->orderBy('plate_number')->orderBy('date')->orderBy('time')->get();
+        $allExpenses = $expensesQuery->orderBy('plate_number')->orderBy('date')->orderBy('time')->get();
+
+        // 👉 separate mo dito
+        $loadExpenses = $allExpenses->where('type', 'load')->values();
+        $fuelExpenses = $allExpenses->where('type', 'fuel')->values();
 
         // ✅ ADD THIS (missing mo)
         $credits = $creditsQuery->orderByDesc('id')->get();
 
-        $totalDebit = (float) $expenses->sum('debit');
+        $totalDebit = (float) $allExpenses->sum('debit');
+
         $totalCredit = (float) $credits->sum('amount');
         $balance = $totalCredit - $totalDebit;
         $trucks = \App\Models\Truck::orderBy('plate_number')->get();
 
         // 🔥 COMPUTE FUEL CONSUMPTION
-        $grouped = $expenses->groupBy('plate_number');
+        $grouped = $allExpenses->groupBy('plate_number');
 
         $finalExpenses = collect();
 
@@ -1100,7 +1086,8 @@ class PayrollController extends Controller
         $avgKmPerLiter = $totalLiters > 0 ? round($totalDistance / $totalLiters, 2) : 0;
 
         return view('owner.payroll.expenses', [
-            'expenses' => $finalExpenses,
+            'expenses' => $finalExpenses, // fuel computed
+            'loadExpenses' => $loadExpenses, // load table
             'credits' => $credits,
             'totalDebit' => $totalDebit,
             'totalCredit' => $totalCredit,
@@ -1113,17 +1100,37 @@ class PayrollController extends Controller
     public function storeExpense(Request $request)
     {
         try {
+            // BEFORE saving
             $data = $request->validate([
-                'date' => ['required', 'date'],
-                'time' => ['nullable', 'date_format:H:i'],
-                'plate_number' => ['required', 'string', 'max:50'],
-                'liters' => ['required', 'numeric', 'min:0'],
-                'start_odometer' => ['nullable', 'integer', 'min:0'],
-                'odometer' => ['nullable', 'integer', 'min:0'],
-                'receipt_surrendered' => ['nullable', 'in:YES,NO'],
-                'debit' => ['required', 'numeric', 'min:0.01'],
-                'remarks' => ['nullable', 'string'],
+                'plate_number' => 'required|string',
+                'date' => 'required|date',
+                'time' => 'nullable|date_format:H:i',
+                'type' => 'required|in:fuel,load',
+                'liters' => 'nullable|numeric',
+                'debit' => 'required|numeric',
+                'start_odometer' => 'nullable|integer',
+                'odometer' => 'nullable|integer',
+                'receipt_surrendered' => 'nullable|in:YES,NO',
+                'remarks' => 'nullable|string',
+                'receipt_image' => 'nullable|image|max:2048',
+                'billed' => false,
             ]);
+
+            if ($request->type === 'load' && empty($request->time)) {
+                return response()->json(
+                    [
+                        'success' => false,
+                        'message' => 'Time is required for load transactions.',
+                    ],
+                    422,
+                );
+            }
+
+            if ($request->type !== 'fuel') {
+                $data['liters'] = null;
+                $data['start_odometer'] = null;
+                $data['odometer'] = null;
+            }
 
             if (!is_null($request->start_odometer) && !is_null($request->odometer)) {
                 if ($request->odometer < $request->start_odometer) {
@@ -1137,15 +1144,21 @@ class PayrollController extends Controller
                 }
             }
 
+            if ($request->hasFile('receipt_image')) {
+                $data['receipt_image'] = $request->file('receipt_image')->store('receipts', 'public');
+            }
+
             $data['start_odometer'] = $data['start_odometer'] ?: null;
             $data['odometer'] = $data['odometer'] ?: null;
             $data['time'] = $data['time'] ?: null;
             $data['receipt_surrendered'] = $data['receipt_surrendered'] ?: null;
             $data['remarks'] = $data['remarks'] ?: null;
+            $data['billed'] = $data['billed'] ?: null;
 
             DB::table('expenses')->insert([
                 'date' => $data['date'],
                 'time' => $data['time'] ?? null,
+                'type' => $data['type'], // ✅ ADD THIS
                 'plate_number' => $data['plate_number'],
                 'liters' => $data['liters'],
                 'start_odometer' => $data['start_odometer'] ?? null,
@@ -1153,6 +1166,8 @@ class PayrollController extends Controller
                 'receipt_surrendered' => $data['receipt_surrendered'] ?? null,
                 'debit' => $data['debit'],
                 'remarks' => $data['remarks'] ?? null,
+                'billed' => $data['billed'] ?? false,
+                'receipt_image' => $data['receipt_image'] ?? null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -1162,6 +1177,18 @@ class PayrollController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    public function updateBilled(Request $request, $id)
+    {
+        DB::table('expenses')
+            ->where('id', $id)
+            ->update([
+                'billed' => $request->billed,
+                'updated_at' => now(),
+            ]);
+
+        return response()->json(['success' => true]);
     }
 
     public function storeCredit(Request $request)

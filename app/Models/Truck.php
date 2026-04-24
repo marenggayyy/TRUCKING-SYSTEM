@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Truck extends Model
 {
     // Use default primary key `id`
-    protected $fillable = ['plate_number', 'truck_type', 'status'];
+    protected $fillable = ['plate_number',  'company_number', 'truck_type', 'status'];
     public function driver()
     {
         return $this->hasOneThrough(

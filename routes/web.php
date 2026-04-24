@@ -166,6 +166,12 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
         Route::post('/payroll/finalize', [PayrollController::class, 'finalizeWeek'])->name('payroll.finalize');
         Route::post('/payroll/expenses/update', [PayrollController::class, 'updateExpense'])->name('payroll.expenses.update');
         Route::post('/payroll/expenses', [PayrollController::class, 'storeExpense'])->name('payroll.expenses.store');
+
+        Route::delete('/payroll/expenses/{id}', [PayrollController::class, 'deleteExpense']);
+        Route::delete('/payroll/credits/{id}', [PayrollController::class, 'deleteCredit']);
+
+        Route::post('/payroll/expenses/{id}/billed', [PayrollController::class, 'updateBilled']);
+
         Route::post('/payroll/credits/store', [PayrollController::class, 'storeCredit'])->name('payroll.credits.store');
         Route::post('/payroll/credits/update', [PayrollController::class, 'updateCredit'])->name('payroll.credits.update');
         Route::post('/company-docs/save', [MaintenanceController::class, 'saveCompanyDoc'])->name('company-docs.save');
@@ -318,7 +324,6 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary', 'flash.layout'])
         Route::get('/trips/history', [FlashTripController::class, 'history'])->name('trips.history');
 
         Route::post('/payroll/finalize', [FlashPayrollController::class, 'finalize'])->name('payroll.finalize');
-
     });
 
 require __DIR__ . '/auth.php';
