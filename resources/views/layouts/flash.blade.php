@@ -1,7 +1,7 @@
 @php
-    $prefix = request()->route()->getPrefix(); // /flash or /owner
-    $prefix = trim($prefix, '/'); // magiging "flash" or "owner"
+    $prefix = session('layout') === 'flash' ? 'flash' : 'owner';
 @endphp
+
 
 <!doctype html>
 <html lang="en" dir="ltr">
@@ -9,7 +9,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>@yield('title', 'Gigz')</title>
+    <title>@yield('title', 'Flash')</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <link rel="shortcut icon" href="{{ asset('assets/images/favicon.ico') }}" />
@@ -27,12 +27,8 @@
 <body>
 
     {{-- ✅ ALWAYS SHOW SIDEBAR --}}
-    @if (session('layout', 'owner') === 'flash')
-        @include('partials.sidebar-flash')
-    @else
-        @include('partials.sidebar')
-    @endif
-
+    @include('partials.sidebar-flash')
+    
     <main class="main-content">
 
         {{-- ✅ ALWAYS SHOW NAVBAR --}}

@@ -1,7 +1,7 @@
 <?php
-    $prefix = request()->route()->getPrefix(); // /flash or /owner
-    $prefix = trim($prefix, '/'); // magiging "flash" or "owner"
+    $prefix = session('layout') === 'flash' ? 'flash' : 'owner';
 ?>
+
 
 <!doctype html>
 <html lang="en" dir="ltr">
@@ -9,7 +9,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title><?php echo $__env->yieldContent('title', 'Gigz'); ?></title>
+    <title><?php echo $__env->yieldContent('title', 'Flash'); ?></title>
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 
     <link rel="shortcut icon" href="<?php echo e(asset('assets/images/favicon.ico')); ?>" />
@@ -27,12 +27,8 @@
 <body>
 
     
-    <?php if(session('layout', 'owner') === 'flash'): ?>
-        <?php echo $__env->make('partials.sidebar-flash', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-    <?php else: ?>
-        <?php echo $__env->make('partials.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-    <?php endif; ?>
-
+    <?php echo $__env->make('partials.sidebar-flash', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    
     <main class="main-content">
 
         
@@ -96,4 +92,4 @@
 </body>
 
 </html>
-<?php /**PATH C:\Users\HF-PC\Downloads\last zip\laravel_app\resources\views/layouts/owner.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\Users\HF-PC\Downloads\last zip\laravel_app\resources\views/layouts/flash.blade.php ENDPATH**/ ?>

@@ -10,6 +10,32 @@ use Illuminate\Support\Facades\Storage;
 
 class DriverController extends Controller
 {
+    public function deleteMultiple(Request $request)
+    {
+        $ids = $request->ids ?? [];
+
+        if (!empty($ids)) {
+            Driver::whereIn('id', $ids)->delete();
+        }
+
+        return back()->with('success', 'Selected drivers deleted.');
+    }
+    
+    private function isFlash()
+    {
+        return request()->routeIs('flash.*');
+    }
+
+    private function routeName($name)
+    {
+        return $this->isFlash() ? "flash.$name" : "owner.$name";
+    }
+
+    private function viewName($name)
+    {
+        return $this->isFlash() ? "flash.$name" : "owner.$name";
+    }
+
     public function index()
     {
         $drivers = Driver::orderBy('name')->get();
@@ -98,7 +124,14 @@ class DriverController extends Controller
             'inactive' => $inactiveDrivers->count() + $inactiveHelpers->count(),
         ];
 
-        return view('owner.drivers.index', compact('drivers', 'helpers', 'stats', 'availableDrivers', 'availableHelpers', 'onTripDrivers', 'onTripHelpers', 'onLeaveDrivers', 'onLeaveHelpers', 'inactiveDrivers', 'inactiveHelpers'));
+        $layout = session('layout', 'owner'); // default owner
+
+        $view = match ($layout) {
+            'flash' => 'flash.drivers.index',
+            default => 'owner.drivers.index',
+        };
+
+        return view($view, compact('drivers', 'helpers', 'stats', 'availableDrivers', 'availableHelpers', 'onTripDrivers', 'onTripHelpers', 'onLeaveDrivers', 'onLeaveHelpers', 'inactiveDrivers', 'inactiveHelpers'));
     }
 
     public function store(Request $request)

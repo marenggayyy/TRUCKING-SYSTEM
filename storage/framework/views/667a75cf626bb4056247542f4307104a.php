@@ -140,7 +140,6 @@
 
     <div class="header">
         <div class="title">PAYSLIP</div>
-        <div class="company">Your Company Name</div>
         <div class="company">
             Payroll Period:
             <?php echo e(\Carbon\Carbon::parse($weekStart)->format('M d')); ?> –

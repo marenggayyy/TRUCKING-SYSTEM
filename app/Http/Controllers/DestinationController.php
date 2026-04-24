@@ -25,7 +25,7 @@ class DestinationController extends Controller
         }
 
         // ✅ Pagination (separate page keys per tab)
-        $perPage = 8; // adjust if you want
+        $perPage = 25; // adjust if you want
 
         $destinations6w = (clone $destinationsQuery)
             ->where('truck_type', '6W')

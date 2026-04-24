@@ -13,8 +13,31 @@ use App\Models\DispatchTrip;
 
 class DashboardController extends Controller
 {
+    private function isFlash()
+    {
+        return request()->routeIs('flash.*');
+    }
+
+    private function routeName($name)
+    {
+        return $this->isFlash() ? "flash.$name" : "owner.$name";
+    }
+
+    private function viewName($name)
+    {
+        return $this->isFlash() ? "flash.$name" : "owner.$name";
+    }
+
+    public function flash()
+    {
+        return view('flash.dashboard'); // ✅ correct
+    }
+
     public function index()
     {
+        if (session('layout') === 'flash') {
+            return view('flash.dashboard'); // ito yung duplicate mo
+        }
         // ----------------
         // BASIC STATS
         // ----------------
@@ -50,6 +73,7 @@ class DashboardController extends Controller
         // ----------------
 
         // ✅ TODAY GAINS
+        // ✅ TODAY GAINS
         $todayGains = (float) DispatchTrip::whereDate('dispatch_date', $today)
             ->whereIn('status', ['Dispatched', 'Completed'])
             ->sum('rate_snapshot');
@@ -57,17 +81,19 @@ class DashboardController extends Controller
         // ✅ TODAY FUEL
         $todayFuel = (float) DB::table('expenses')->whereDate('date', $today)->sum('debit');
 
-        // ✅ TODAY PAYROLL
-        $todayPayroll = (float) DB::table('payroll_payments')->whereDate('week_start', '<=', $today)->whereDate('week_end', '>=', $today)->sum('amount');
+        // ✅ TODAY PAYROLL (FIXED)
+        $todayPayroll = (float) DB::table('payroll_payments')->whereDate('paid_at', $today)->sum('amount');
 
-        // ✅ TODAY EXPENSES
+        // ✅ TOTAL EXPENSES
         $todayExpenses = $todayFuel + $todayPayroll;
 
-        // ✅ TODAY PROFIT
+        // ✅ PROFIT
         $todayProfit = $todayGains - $todayExpenses;
 
         $todayData = [
-            'dispatched' => DispatchTrip::whereDate('dispatch_date', $today)->where('status', 'Dispatched')->count(),
+            'dispatched' => DispatchTrip::whereDate('dispatch_date', $today)
+                ->whereIn('status', ['Dispatched', 'Completed'])
+                ->count(),
 
             'gains' => $todayGains,
             'profit' => $todayProfit,

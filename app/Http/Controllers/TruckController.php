@@ -7,6 +7,21 @@ use App\Models\Truck;
 
 class TruckController extends Controller
 {
+    private function isFlash()
+    {
+        return request()->routeIs('flash.*');
+    }
+
+    private function routeName($name)
+    {
+        return $this->isFlash() ? "flash.$name" : "owner.$name";
+    }
+
+    private function viewName($name)
+    {
+        return $this->isFlash() ? "flash.$name" : "owner.$name";
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -17,7 +32,9 @@ class TruckController extends Controller
 
         Truck::create($validated);
 
-        return redirect()->route('owner.trucks.index')->with('success', 'Truck added successfully.');
+        $route = $this->isFlash() ? 'flash.trucks.index' : 'owner.trucks.index';
+
+        return redirect()->route($route)->with('success', 'Truck added successfully.');
     }
 
     public function index()
@@ -41,7 +58,9 @@ class TruckController extends Controller
             ->orderBy('plate_number')
             ->paginate(10, ['*'], 'sixw_page');
 
-        return view('owner.trucks.index', compact('stats', 'l300Trucks', 'sixWTrucks'));
+        $view = $this->isFlash() ? 'flash.trucks.index' : 'owner.trucks.index';
+
+        return view($view, compact('stats', 'l300Trucks', 'sixWTrucks'));
     }
 
     public function sidebar($id)
@@ -60,14 +79,19 @@ class TruckController extends Controller
             ->dispatchTrips()
             ->where('dispatch_date', '>=', now()->subWeek())
             ->get();
-        return view('owner.trucks._sidebar', compact('truck', 'driver', 'fuelTotal', 'fuelAmount', 'trips'))->render();
+
+        $view = $this->isFlash() ? 'flash.trucks._sidebar' : 'owner.trucks._sidebar';
+
+        return view($view, compact('truck', 'driver', 'fuelTotal', 'fuelAmount', 'trips'))->render();
     }
 
     public function destroy(Truck $truck)
     {
         $truck->delete();
 
-        return redirect()->route('owner.trucks.index')->with('success', 'Truck deleted successfully.');
+        $route = $this->isFlash() ? 'flash.trucks.index' : 'owner.trucks.index';
+
+        return redirect()->route($route)->with('success', 'Truck deleted successfully.');
     }
 
     public function update(Request $request, Truck $truck)
@@ -80,7 +104,9 @@ class TruckController extends Controller
 
         $truck->update($validated);
 
-        return redirect()->route('owner.trucks.index')->with('success', 'Truck updated successfully.');
+        $route = $this->isFlash() ? 'flash.trucks.index' : 'owner.trucks.index';
+
+        return redirect()->route($route)->with('success', 'Truck updated successfully.');
     }
 
     public function destroyAll(Request $request)
@@ -130,7 +156,9 @@ class TruckController extends Controller
             ->orderByDesc('dispatch_date')
             ->get();
 
-        $html = view('owner.trucks.modal', [
+        $view = $this->isFlash() ? 'flash.trucks.modal' : 'owner.trucks.modal';
+
+        $html = view($view, [
             'truck' => $truck,
             'driverName' => $driverName,
             'fuelConsumption' => $fuelConsumption,

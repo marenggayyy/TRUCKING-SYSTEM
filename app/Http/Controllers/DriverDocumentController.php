@@ -11,7 +11,7 @@ class DriverDocumentController extends Controller
 {
     public function getDocs($id, $type)
     {
-        return PersonDocument::where('person_id', $id)->where('person_type', $type)->get();
+        return response()->json(PersonDocument::where('person_id', $id)->where('person_type', $type)->get());
     }
 
     public function savePersonDocs(Request $request)

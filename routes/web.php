@@ -15,6 +15,11 @@ use App\Http\Controllers\PayrollPaymentController;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\DriverDocumentController;
+use App\Http\Controllers\Flash\DestinationController as FlashDestinationController;
+use App\Http\Controllers\FlashTripController;
+use App\Http\Controllers\FlashPayrollController;
+use App\Http\Controllers\FlashPayrollPaymentController;
+use App\Http\Controllers\FlashDashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -59,7 +64,6 @@ Route::middleware(['auth', 'role:owner,it'])
 
         Route::get('/payroll/dashboard', [PayrollController::class, 'dashboard'])->name('payroll.dashboard');
         Route::get('/payroll/history', [PayrollController::class, 'history'])->name('payroll.history');
-        
     });
 
 /*
@@ -134,6 +138,8 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
         Route::get('/payroll/expenses/last-odometer/{plate}', [PayrollController::class, 'getLastOdometer']);
         Route::delete('/payroll/expenses/{id}', [PayrollController::class, 'deleteExpense']);
 
+        Route::get('/person-docs/{id}/{type}', [DriverDocumentController::class, 'getDocs'])->name('person-docs.get');
+
         Route::post('/person-docs/save', [DriverDocumentController::class, 'savePersonDocs'])->name('person-docs.save');
         Route::post('/trips/{dispatch_trip_id}/complete', [DispatchTripController::class, 'complete'])->name('trips.complete');
         Route::post('/allowances/update', [PayrollController::class, 'updateAllowances'])->name('allowances.update');
@@ -181,6 +187,20 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
         Route::post('/maintenance/save', [MaintenanceController::class, 'save'])->name('maintenance.save');
     });
 
+// web.php
+Route::get('/switch-layout/{type}', function ($type) {
+    if (!in_array($type, ['flash', 'default'])) {
+        abort(404);
+    }
+
+    session(['layout' => $type]);
+
+    if ($type === 'flash') {
+        return redirect()->route('flash.dashboard');
+    }
+
+    return redirect()->route('dashboard');
+})->name('layout.switch');
 /*
 |--------------------------------------------------------------------------
 | LOGOUT
@@ -194,5 +214,111 @@ Route::post('/logout', function () {
 })
     ->middleware('auth')
     ->name('logout');
+
+/*
+|--------------------------------------------------------------------------
+| OWNER + IT ONLY (INCOME REPORTS + USER MANAGEMENT)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/flash/dashboard', [FlashDashboardController::class, 'index'])
+    ->middleware(['auth', 'flash.layout'])
+    ->name('flash.dashboard');
+
+Route::middleware(['auth', 'role:owner,it', 'flash.layout'])
+    ->prefix('flash')
+    ->name('flash.')
+    ->group(function () {
+        // USERS
+
+        Route::get('/payroll/dashboard', [FlashPayrollController::class, 'dashboard'])->name('payroll.dashboard');
+        Route::get('/payroll/history', [FlashPayrollController::class, 'history'])->name('payroll.history');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| FILES (ALL ROLES EXCEPT RESTRICTED)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'role:owner,it,admin,secretary', 'flash.layout'])
+    ->prefix('flash')
+    ->middleware('flash.layout')
+    ->name('flash.')
+    ->group(function () {
+        // DESTINATIONS
+        Route::get('/destinations', [FlashDestinationController::class, 'index'])->name('destinations.index');
+
+        Route::post('/destinations', [FlashDestinationController::class, 'store'])->name('destinations.store');
+
+        Route::put('/destinations/{id}', [FlashDestinationController::class, 'update'])->name('destinations.update');
+
+        Route::delete('/destinations/{id}', [FlashDestinationController::class, 'destroy'])->name('destinations.destroy');
+
+        // TRUCKS
+        Route::delete('/trucks/delete-all', [TruckController::class, 'destroyAll'])->name('trucks.destroyAll');
+        Route::resource('trucks', TruckController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::get('/trucks/sidebar/{id}', [TruckController::class, 'sidebar'])->name('trucks.sidebar');
+
+        // DRIVERS
+        Route::get('/drivers', [DriverController::class, 'index'])->name('drivers.index');
+        Route::post('/drivers', [DriverController::class, 'store'])->name('drivers.store');
+        Route::put('/drivers/{driver}', [DriverController::class, 'update'])->name('drivers.update');
+        Route::delete('/drivers/{driver}', [DriverController::class, 'destroy'])->name('drivers.destroy');
+
+        Route::post('/drivers/delete-multiple', [DriverController::class, 'deleteMultiple'])->name('drivers.deleteMultiple');
+
+        Route::get('/person-docs/{id}/{type}', [DriverDocumentController::class, 'getDocs'])->name('person-docs.get');
+        Route::post('/person-docs/save', [DriverDocumentController::class, 'savePersonDocs'])->name('person-docs.save');
+
+        Route::delete('/people/bulk-delete', [DriverController::class, 'bulkDestroyPeople'])->name('people.bulkDestroy');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| TRIPS (ADMIN CAN ACCESS)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'role:owner,it,admin', 'flash.layout'])
+    ->prefix('flash')
+    ->name('flash.')
+    ->group(function () {
+        Route::get('/trips', [FlashTripController::class, 'index'])->name('trips.index');
+        Route::post('/trips', [FlashTripController::class, 'store'])->name('trips.store');
+        Route::post('/trips/{id}/assign', [FlashTripController::class, 'assign'])->name('trips.assign');
+        Route::post('/trips/{id}/dispatch', [FlashTripController::class, 'dispatch'])->name('trips.dispatch');
+        Route::post('/trips/{id}/deliver', [FlashTripController::class, 'deliver'])->name('trips.deliver');
+        Route::put('/trips/{id}', [FlashTripController::class, 'update'])->name('trips.update');
+
+        Route::delete('/trips/all/delete', [FlashTripController::class, 'destroyAll'])->name('trips.destroyAll');
+        Route::delete('/trips/{id}', [FlashTripController::class, 'destroy'])->name('trips.destroy');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| BILLING + PAYROLL (ADMIN + SECRETARY + OWNER + IT)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'role:owner,it,admin,secretary', 'flash.layout'])
+    ->prefix('flash')
+    ->name('flash.')
+    ->group(function () {
+        Route::get('/payroll', [FlashPayrollController::class, 'index'])->name('payroll.index');
+        Route::post('/payroll/pay', [FlashPayrollPaymentController::class, 'store'])->name('payroll.pay');
+
+        Route::get('/payroll/pdf/{id}', [FlashPayrollController::class, 'downloadPDF'])->name('payroll.pdf');
+
+        Route::delete('/payroll/delete/{id}', [FlashPayrollController::class, 'destroy'])->name('payroll.delete');
+
+        Route::get('/billing', [FlashPayrollController::class, 'billing'])->name('payroll.billing');
+
+        Route::post('/trips/{id}/complete', [FlashPayrollController::class, 'complete'])->name('trips.complete');
+
+        Route::put('/trips/{id}/billing-update', [FlashPayrollController::class, 'updateBilling'])->name('trips.updateBilling');
+
+        Route::get('/trips/history', [FlashTripController::class, 'history'])->name('trips.history');
+
+        Route::post('/payroll/finalize', [FlashPayrollController::class, 'finalize'])->name('payroll.finalize');
+
+    });
 
 require __DIR__ . '/auth.php';
