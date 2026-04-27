@@ -219,23 +219,6 @@
                             </a>
                         </li>
                         <?php endif; ?>
-                       <?php if(hasRole(['owner','it', 'secretary'])): ?>
-
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo e(request()->routeIs('owner.payroll.expenses') ? 'active' : ''); ?>"
-                                href="<?php echo e(route('owner.payroll.expenses')); ?>">
-                                <i class="icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" viewBox="0 0 24 24"
-                                        fill="currentColor">
-                                        <circle cx="12" cy="12" r="8"></circle>
-                                    </svg>
-                                </i>
-                                <i class="sidenav-mini-icon">F</i>
-                                <span class="item-name">Fuel Consumption</span>
-                            </a>
-                        </li>
-                         <?php endif; ?>
-
                     </ul>
                 </li>
                 <?php endif; ?>
@@ -280,6 +263,23 @@
 
                     <ul class="sub-nav collapse <?php echo e(request()->routeIs('owner.users.*') ? 'show' : ''); ?>"
                         id="sidebar-management" data-bs-parent="#sidebar-menu">
+
+                        <?php if(hasRole(['owner','it', 'secretary'])): ?>
+
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('owner.payroll.expenses') ? 'active' : ''); ?>"
+                                href="<?php echo e(route('owner.payroll.expenses')); ?>">
+                                <i class="icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" viewBox="0 0 24 24"
+                                        fill="currentColor">
+                                        <circle cx="12" cy="12" r="8"></circle>
+                                    </svg>
+                                </i>
+                                <i class="sidenav-mini-icon">E</i>
+                                <span class="item-name">Expenses & Budget </span>
+                            </a>
+                        </li>
+                         <?php endif; ?>
 
                         <li class="nav-item">
                             <a class="nav-link <?php echo e(request()->routeIs('owner.users.index') ? 'active' : ''); ?>"

@@ -106,38 +106,126 @@ class PayrollController extends Controller
 
     public function getLastOdometer($plate)
     {
-        $last = DB::table('expenses')->where('plate_number', $plate)->whereNotNull('odometer')->orderByDesc('date')->orderByDesc('time')->first();
+        $last = DB::table('expenses')->where('plate_number', $plate)->where('type', 'fuel')->whereNotNull('odometer')->orderByDesc('date')->orderByDesc('id')->first();
 
         return response()->json([
-            'odometer' => $last ? $last->odometer : null,
+            'odometer' => $last?->odometer,
         ]);
     }
 
     public function updateExpense(Request $request)
     {
+        // ======================
+        // VALIDATION
+        // ======================
         $data = $request->validate([
             'id' => 'required|integer',
-            'liters' => 'required|numeric',
+            'liters' => 'required|numeric|min:0.01',
             'debit' => 'required|numeric',
             'start_odometer' => ['nullable', 'integer', 'min:0'],
-            'odometer' => ['nullable', 'integer', 'min:0', 'gte:start_odometer'],
+            'odometer' => ['nullable', 'integer', 'min:0'],
             'receipt_surrendered' => 'nullable|in:YES,NO',
             'remarks' => 'nullable|string',
+            'receipt_image' => 'nullable|image|max:2048',
         ]);
 
-        DB::table('expenses')
-            ->where('id', $data['id'])
-            ->update([
-                'liters' => $data['liters'],
-                'debit' => $data['debit'],
-                'start_odometer' => $data['start_odometer'],
-                'odometer' => $data['odometer'],
-                'receipt_surrendered' => $data['receipt_surrendered'],
-                'remarks' => $data['remarks'],
-                'updated_at' => now(),
-            ]);
+        // ======================
+        // VALIDATE ODOMETER LOGIC
+        // ======================
+        if (!is_null($data['start_odometer']) && !is_null($data['odometer']) && $data['odometer'] < $data['start_odometer']) {
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'End odometer must be greater than or equal to start odometer.',
+                ],
+                422,
+            );
+        }
 
-        return response()->json(['success' => true]);
+        // ======================
+        // COMPUTE DISTANCE + KM/L
+        // ======================
+        $distance = null;
+        $kmPerLiter = null;
+
+        if (!is_null($data['start_odometer']) && !is_null($data['odometer'])) {
+            $distance = $data['odometer'] - $data['start_odometer'];
+
+            if (!is_null($data['liters']) && $data['liters'] > 0) {
+                $kmPerLiter = round($distance / $data['liters'], 2);
+            }
+        }
+
+        // ======================
+        // BUILD UPDATE DATA
+        // ======================
+        $updateData = [
+            'liters' => $data['liters'],
+            'debit' => $data['debit'],
+
+            'start_odometer' => $data['start_odometer'],
+            'odometer' => $data['odometer'],
+
+            'distance' => $distance,
+            'km_per_liter' => $kmPerLiter,
+
+            'receipt_surrendered' => $data['receipt_surrendered'],
+            'remarks' => $data['remarks'],
+
+            'updated_at' => now(),
+        ];
+
+        // ======================
+        // HANDLE NEW RECEIPT IMAGE
+        // ======================
+        if ($request->hasFile('receipt_image')) {
+            $path = $request->file('receipt_image')->store('receipts', 'public');
+            $updateData['receipt_image'] = $path;
+        }
+
+        // ======================
+        // UPDATE RECORD
+        // ======================
+        DB::table('expenses')->where('id', $data['id'])->update($updateData);
+
+        return response()->json([
+            'success' => true,
+        ]);
+    }
+
+    public function updateLoadExpense(Request $request)
+    {
+        $data = $request->validate([
+            'id' => 'required|integer',
+            'plate_number' => 'required|string',
+            'date' => 'required|date',
+            'time' => 'nullable',
+            'debit' => 'required|numeric',
+            'receipt_surrendered' => 'nullable|in:YES,NO',
+            'remarks' => 'nullable|string',
+            'receipt_image' => 'nullable|image|max:2048',
+        ]);
+
+        $updateData = [
+            'plate_number' => $data['plate_number'],
+            'date' => $data['date'],
+            'time' => $data['time'],
+            'debit' => $data['debit'],
+            'receipt_surrendered' => $data['receipt_surrendered'],
+            'remarks' => $data['remarks'],
+            'updated_at' => now(),
+        ];
+
+        if ($request->hasFile('receipt_image')) {
+            $path = $request->file('receipt_image')->store('receipts', 'public');
+            $updateData['receipt_image'] = $path;
+        }
+
+        DB::table('expenses')->where('id', $data['id'])->update($updateData);
+
+        return response()->json([
+            'success' => true,
+        ]);
     }
 
     public function complete($id)
@@ -1100,82 +1188,147 @@ class PayrollController extends Controller
     public function storeExpense(Request $request)
     {
         try {
-            // BEFORE saving
-            $data = $request->validate([
-                'plate_number' => 'required|string',
-                'date' => 'required|date',
-                'time' => 'nullable|date_format:H:i',
-                'type' => 'required|in:fuel,load',
-                'liters' => 'nullable|numeric',
-                'debit' => 'required|numeric',
-                'start_odometer' => 'nullable|integer',
-                'odometer' => 'nullable|integer',
-                'receipt_surrendered' => 'nullable|in:YES,NO',
-                'remarks' => 'nullable|string',
-                'receipt_image' => 'nullable|image|max:2048',
-                'billed' => false,
-            ]);
-
-            if ($request->type === 'load' && empty($request->time)) {
-                return response()->json(
-                    [
-                        'success' => false,
-                        'message' => 'Time is required for load transactions.',
-                    ],
-                    422,
-                );
+            // ======================
+            // CONDITIONAL VALIDATION
+            // ======================
+            if ($request->type === 'fuel') {
+                $data = $request->validate([
+                    'type' => 'required|in:fuel,load',
+                    'plate_number' => 'required|string',
+                    'date' => 'required|date',
+                    'liters' => 'required|numeric|min:0.01',
+                    'debit' => 'required|numeric',
+                    'start_odometer' => 'nullable|integer|min:0',
+                    'odometer' => 'required|integer|min:0',
+                    'receipt_surrendered' => 'nullable|in:YES,NO',
+                    'remarks' => 'nullable|string',
+                    'receipt_image' => 'nullable|image|max:2048',
+                ]);
+            } else {
+                $data = $request->validate([
+                    'type' => 'required|in:fuel,load',
+                    'plate_number' => 'required|string',
+                    'date' => 'required|date',
+                    'time' => 'required|date_format:H:i',
+                    'debit' => 'required|numeric',
+                    'receipt_surrendered' => 'nullable|in:YES,NO',
+                    'remarks' => 'nullable|string',
+                    'receipt_image' => 'nullable|image|max:2048',
+                ]);
             }
 
+            // ======================
+            // DEFAULT NULLS FOR LOAD
+            // ======================
             if ($request->type !== 'fuel') {
                 $data['liters'] = null;
                 $data['start_odometer'] = null;
                 $data['odometer'] = null;
+                $distance = null;
+                $kmPerLiter = null;
             }
 
-            if (!is_null($request->start_odometer) && !is_null($request->odometer)) {
-                if ($request->odometer < $request->start_odometer) {
+            // ======================
+            // FUEL AUTO START ODOMETER LOGIC
+            // ======================
+            if ($request->type === 'fuel') {
+                // Get last fuel record for SAME plate only
+                $lastFuel = DB::table('expenses')->where('plate_number', $data['plate_number'])->where('type', 'fuel')->whereNotNull('odometer')->orderByDesc('date')->orderByDesc('id')->first();
+
+                /**
+                 * FIRST ENTRY:
+                 * Use manual input
+                 *
+                 * NEXT ENTRY:
+                 * Use previous end odometer automatically
+                 */
+                $manualStart = isset($data['start_odometer']) ? (int) $data['start_odometer'] : null;
+
+                $startOdometer = $lastFuel ? (int) $lastFuel->odometer : $manualStart;
+                $endOdometer = $data['odometer'];
+
+                // Prevent invalid lower odometer
+                if (!is_null($startOdometer) && $endOdometer < $startOdometer) {
                     return response()->json(
                         [
                             'success' => false,
-                            'message' => 'End odometer must be greater than start',
+                            'message' => 'End odometer must be greater than or equal to start odometer.',
                         ],
                         422,
                     );
                 }
+
+                // Compute distance
+                $distance = null;
+                $kmPerLiter = null;
+
+                if (!is_null($startOdometer) && !is_null($endOdometer)) {
+                    $distance = $endOdometer - $startOdometer;
+
+                    if (!is_null($data['liters']) && $data['liters'] > 0) {
+                        $kmPerLiter = round($distance / $data['liters'], 2);
+                    }
+                }
+
+                // Override values
+                $data['start_odometer'] = $startOdometer;
+                $data['odometer'] = $endOdometer;
             }
 
+            // ======================
+            // HANDLE RECEIPT IMAGE
+            // ======================
             if ($request->hasFile('receipt_image')) {
                 $data['receipt_image'] = $request->file('receipt_image')->store('receipts', 'public');
+            } else {
+                $data['receipt_image'] = null;
             }
 
-            $data['start_odometer'] = $data['start_odometer'] ?: null;
-            $data['odometer'] = $data['odometer'] ?: null;
-            $data['time'] = $data['time'] ?: null;
-            $data['receipt_surrendered'] = $data['receipt_surrendered'] ?: null;
-            $data['remarks'] = $data['remarks'] ?: null;
-            $data['billed'] = $data['billed'] ?: null;
-
+            // ======================
+            // INSERT
+            // ======================
             DB::table('expenses')->insert([
                 'date' => $data['date'],
                 'time' => $data['time'] ?? null,
-                'type' => $data['type'], // ✅ ADD THIS
+                'type' => $data['type'],
                 'plate_number' => $data['plate_number'],
-                'liters' => $data['liters'],
+                'liters' => $data['liters'] ?? null,
+
                 'start_odometer' => $data['start_odometer'] ?? null,
                 'odometer' => $data['odometer'] ?? null,
+
+                'distance' => $distance,
+                'km_per_liter' => $kmPerLiter,
+
                 'receipt_surrendered' => $data['receipt_surrendered'] ?? null,
                 'debit' => $data['debit'],
                 'remarks' => $data['remarks'] ?? null,
-                'billed' => $data['billed'] ?? false,
-                'receipt_image' => $data['receipt_image'] ?? null,
+                'billed' => false,
+                'receipt_image' => $data['receipt_image'],
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-            return response()->json(['success' => true]);
+
+            return response()->json([
+                'success' => true,
+            ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage(), 'errors' => $e->errors()], 422);
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors(),
+                ],
+                422,
+            );
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ],
+                500,
+            );
         }
     }
 

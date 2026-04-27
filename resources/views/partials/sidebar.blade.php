@@ -219,23 +219,6 @@
                             </a>
                         </li>
                         @endif
-                       @if(hasRole(['owner','it', 'secretary']))
-
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('owner.payroll.expenses') ? 'active' : '' }}"
-                                href="{{ route('owner.payroll.expenses') }}">
-                                <i class="icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" viewBox="0 0 24 24"
-                                        fill="currentColor">
-                                        <circle cx="12" cy="12" r="8"></circle>
-                                    </svg>
-                                </i>
-                                <i class="sidenav-mini-icon">F</i>
-                                <span class="item-name">Fuel Consumption</span>
-                            </a>
-                        </li>
-                         @endif
-
                     </ul>
                 </li>
                 @endif
@@ -280,6 +263,23 @@
 
                     <ul class="sub-nav collapse {{ request()->routeIs('owner.users.*') ? 'show' : '' }}"
                         id="sidebar-management" data-bs-parent="#sidebar-menu">
+
+                        @if(hasRole(['owner','it', 'secretary']))
+
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('owner.payroll.expenses') ? 'active' : '' }}"
+                                href="{{ route('owner.payroll.expenses') }}">
+                                <i class="icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" viewBox="0 0 24 24"
+                                        fill="currentColor">
+                                        <circle cx="12" cy="12" r="8"></circle>
+                                    </svg>
+                                </i>
+                                <i class="sidenav-mini-icon">E</i>
+                                <span class="item-name">Expenses & Budget </span>
+                            </a>
+                        </li>
+                         @endif
 
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('owner.users.index') ? 'active' : '' }}"

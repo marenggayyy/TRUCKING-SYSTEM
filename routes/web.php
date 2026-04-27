@@ -164,8 +164,12 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
 
         Route::post('/payroll/pay', [PayrollPaymentController::class, 'store'])->name('payroll.pay');
         Route::post('/payroll/finalize', [PayrollController::class, 'finalizeWeek'])->name('payroll.finalize');
-        Route::post('/payroll/expenses/update', [PayrollController::class, 'updateExpense'])->name('payroll.expenses.update');
+        
         Route::post('/payroll/expenses', [PayrollController::class, 'storeExpense'])->name('payroll.expenses.store');
+
+
+        Route::post('/payroll/expenses/update', [PayrollController::class, 'updateExpense']);
+        Route::post('/payroll/expenses/update-load', [PayrollController::class, 'updateLoadExpense']);
 
         Route::delete('/payroll/expenses/{id}', [PayrollController::class, 'deleteExpense']);
         Route::delete('/payroll/credits/{id}', [PayrollController::class, 'deleteCredit']);
