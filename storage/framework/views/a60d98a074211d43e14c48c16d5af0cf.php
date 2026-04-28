@@ -320,10 +320,12 @@
                                 <p class="mb-1 small text-white-50">Expenses</p>
                                 <h5 class="fw-bolder text-danger mb-0" data-bs-toggle="tooltip" data-bs-html="true"
                                     title="
-        Fuel: ₱<?php echo e(number_format($financialData['fuel'] ?? 0, 2)); ?> <br>
-        Payroll: ₱<?php echo e(number_format($financialData['payroll'] ?? 0, 2)); ?>
+    Fuel: ₱<?php echo e(number_format($financialData['fuel'] ?? 0, 2)); ?> <br>
+    Load: ₱<?php echo e(number_format($financialData['load'] ?? 0, 2)); ?> <br>
+    Deductions: ₱<?php echo e(number_format($financialData['deductions'] ?? 0, 2)); ?> <br>
+    Payroll: ₱<?php echo e(number_format($financialData['payroll'] ?? 0, 2)); ?>
 
-    ">
+">
                                     ₱<?php echo e(number_format($financialData['expenses'] ?? 0, 2)); ?>
 
                                 </h5>

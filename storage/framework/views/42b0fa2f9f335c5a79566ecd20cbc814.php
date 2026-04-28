@@ -299,7 +299,7 @@
                                                 <th>Destination</th>
                                                 <th>Driver</th>
                                                 <th>Rate</th>
-                                                <th>Amount (12%)</th>
+                                                <th>Amount</th>
                                                 <th>Allowance</th>
                                                 <th>Total</th>
                                             </tr>

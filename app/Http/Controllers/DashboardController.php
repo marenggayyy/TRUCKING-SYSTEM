@@ -128,9 +128,11 @@ class DashboardController extends Controller
 
         $topDestinations = Destination::orderByDesc('rate')->take(6)->get();
 
-        // ----------------
+        // ==============================
+        // DashboardController.php
+        // REPLACE ONLY THIS SECTION:
         // 🔥 FINANCIAL SUMMARY
-        // ----------------
+        // ==============================
 
         // ✅ TOTAL GAINS
         $gains = (float) DispatchTrip::whereIn('status', ['Dispatched', 'Completed'])->sum('rate_snapshot');
@@ -142,25 +144,43 @@ class DashboardController extends Controller
 
         $gainsPending = (float) DispatchTrip::where('billing_status', 'Pending')->sum('rate_snapshot');
 
-        // ✅ EXPENSES
-        $fuelExpenses = (float) DB::table('expenses')->sum('debit');
+        // ==============================
+        // EXPENSE BREAKDOWN
+        // ==============================
+
+        // FUEL ONLY
+        $fuelExpenses = (float) DB::table('expenses')->where('type', 'fuel')->sum('debit');
+
+        // LOAD ONLY
+        $loadExpenses = (float) DB::table('expenses')->where('type', 'load')->sum('debit');
+
+        // DEDUCTIONS (SSS/PAGIBIG/PHILHEALTH)
+        $deductionExpenses = (float) DB::table('deductions')->sum('amount');
+
+        // PAYROLL / PASAHOD
         $payrollExpenses = (float) DB::table('payroll_payments')->sum('amount');
 
-        $expenses = $fuelExpenses + $payrollExpenses;
+        // ✅ TOTAL EXPENSES
+        $expenses = $fuelExpenses + $loadExpenses + $deductionExpenses + $payrollExpenses;
 
         // ✅ PROFIT
         $profit = $gains - $expenses;
 
+        // ==============================
+        // FINAL ARRAY
+        // ==============================
         $financialData = [
             'gains' => $gains,
             'expenses' => $expenses,
             'profit' => $profit,
 
-            // breakdown (expenses)
+            // EXPENSE BREAKDOWN
             'fuel' => $fuelExpenses,
+            'load' => $loadExpenses,
+            'deductions' => $deductionExpenses,
             'payroll' => $payrollExpenses,
 
-            // breakdown (gains)
+            // GAINS BREAKDOWN
             'gains_billed' => $gainsBilled,
             'gains_unbilled' => $gainsUnbilled,
             'gains_pending' => $gainsPending,

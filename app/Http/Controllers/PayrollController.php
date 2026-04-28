@@ -369,7 +369,11 @@ class PayrollController extends Controller
                 $rows = $group->map(function ($t) {
                     $rate = (float) ($t->rate_snapshot ?? 0);
 
-                    $amount = $t->manual_amount ?? round($rate * 0.12, 2);
+                    $helperCount = $t->helpers->count();
+
+                    $driverRatePercent = $helperCount >= 2 ? 0.1 : 0.12;
+
+                    $amount = $t->manual_amount ?? round($rate * $driverRatePercent, 2);
                     $allowance = $t->manual_allowance ?? $this->allowanceFromRate($rate);
 
                     return [
@@ -445,8 +449,10 @@ class PayrollController extends Controller
         // 📊 QUEUE SUMMARY
         // =========================
         foreach ($driversPayroll as $d) {
+            $driverNames = collect($d['rows'])->pluck('driver')->unique()->implode(', ');
+
             $queue->push([
-                'name' => 'Plate: ' . $d['plate'] . ' (' . $d['truck_type'] . ')',
+                'name' => $driverNames ?: 'Unknown Driver',
                 'role' => 'Driver',
                 'trips' => count($d['rows']),
                 'amount' => $d['payroll_total'],
@@ -455,8 +461,10 @@ class PayrollController extends Controller
         }
 
         foreach ($helpersPayroll as $h) {
+            $helperNames = collect($h['rows'])->pluck('helper')->unique()->implode(', ');
+
             $queue->push([
-                'name' => 'Plate: ' . $h['plate'] . ' (' . $h['truck_type'] . ')',
+                'name' => $helperNames ?: 'Unknown Helper',
                 'role' => 'Helper',
                 'trips' => count($h['rows']),
                 'amount' => $h['payroll_total'],
@@ -549,7 +557,7 @@ class PayrollController extends Controller
 
     private function getDriverPayroll($driverId, $weekStart, $weekEnd)
     {
-        $trips = DispatchTrip::with(['destination', 'truck', 'driver'])
+        $trips = DispatchTrip::with(['destination', 'truck', 'driver', 'helpers'])
             ->where('status', 'Completed')
             ->whereDate('dispatch_date', '>=', $weekStart)
             ->whereDate('dispatch_date', '<=', $weekEnd)
@@ -559,7 +567,11 @@ class PayrollController extends Controller
         $rows = $trips->map(function ($t) {
             $rate = (float) ($t->rate_snapshot ?? 0);
 
-            $computedAmount = round($rate * 0.12, 2);
+            $helperCount = $t->helpers->count();
+
+            $driverRatePercent = $helperCount >= 2 ? 0.1 : 0.12;
+
+            $computedAmount = round($rate * $driverRatePercent, 2);
             $computedAllowance = $this->allowanceFromRate($rate);
 
             $amount = $t->manual_amount ?? $computedAmount;
@@ -696,7 +708,11 @@ class PayrollController extends Controller
                 $rows = $group->map(function ($t) {
                     $rate = (float) ($t->rate_snapshot ?? 0);
 
-                    $computedAmount = round($rate * 0.12, 2);
+                    $helperCount = $t->helpers->count();
+
+                    $driverRatePercent = $helperCount >= 2 ? 0.1 : 0.12;
+
+                    $computedAmount = round($rate * $driverRatePercent, 2);
                     $computedAllowance = $this->allowanceFromRate($rate);
 
                     $amount = $t->manual_amount ?? $computedAmount;
@@ -902,7 +918,11 @@ class PayrollController extends Controller
                         if ($type === 'driver' && $t->driver_id == $personId) {
                             $rate = (float) ($t->rate_snapshot ?? 0);
 
-                            $computedAmount = round($rate * 0.12, 2);
+                            $helperCount = $t->helpers->count();
+
+                            $driverRatePercent = $helperCount >= 2 ? 0.1 : 0.12;
+
+                            $computedAmount = round($rate * $driverRatePercent, 2);
                             $computedAllowance = $this->allowanceFromRate($rate);
 
                             $amount = $t->manual_amount ?? $computedAmount;
@@ -1094,96 +1114,140 @@ class PayrollController extends Controller
     }
 
     public function expenses(Request $request)
-    {
-        $month = $request->get('month');
-        $year = $request->get('year');
+{
+    $month = $request->get('month');
+    $year = $request->get('year');
 
-        $expensesQuery = DB::table('expenses');
-        $creditsQuery = DB::table('credits');
+    $expensesQuery = DB::table('expenses');
+    $creditsQuery = DB::table('credits');
+    $deductionsQuery = DB::table('deductions'); // ✅ ADD THIS
 
-        if ($month && $year) {
-            $expensesQuery->whereYear('date', $year)->whereMonth('date', $month);
+    if ($month && $year) {
+        $expensesQuery->whereYear('date', $year)
+            ->whereMonth('date', $month);
 
-            $creditsQuery->whereYear('date', $year)->whereMonth('date', $month);
-        }
+        $creditsQuery->whereYear('date', $year)
+            ->whereMonth('date', $month);
 
-        $allExpenses = $expensesQuery->orderBy('plate_number')->orderBy('date')->orderBy('time')->get();
+        // ✅ FILTER DEDUCTIONS TOO
+        $deductionsQuery->whereYear('date_paid', $year)
+            ->whereMonth('date_paid', $month);
+    }
 
-        // 👉 separate mo dito
-        $loadExpenses = $allExpenses->where('type', 'load')->values();
-        $fuelExpenses = $allExpenses->where('type', 'fuel')->values();
+    $allExpenses = $expensesQuery
+        ->orderBy('plate_number')
+        ->orderBy('date')
+        ->orderBy('time')
+        ->get();
 
-        // ✅ ADD THIS (missing mo)
-        $credits = $creditsQuery->orderByDesc('id')->get();
+    // 👉 Separate expense types
+    $loadExpenses = $allExpenses->where('type', 'load')->values();
+    $fuelExpenses = $allExpenses->where('type', 'fuel')->values();
 
-        $totalDebit = (float) $allExpenses->sum('debit');
+    // Credits
+    $credits = $creditsQuery
+        ->orderByDesc('id')
+        ->get();
 
-        $totalCredit = (float) $credits->sum('amount');
-        $balance = $totalCredit - $totalDebit;
-        $trucks = \App\Models\Truck::orderBy('plate_number')->get();
+    // ✅ DEDUCTIONS
+    $deductions = $deductionsQuery
+        ->orderByDesc('date_paid')
+        ->get();
 
-        // 🔥 COMPUTE FUEL CONSUMPTION
-        $grouped = $allExpenses->groupBy('plate_number');
+    $totalDebit = (float) $allExpenses->sum('debit');
+    $totalCredit = (float) $credits->sum('amount');
+    $balance = $totalCredit - $totalDebit;
 
-        $finalExpenses = collect();
+    $trucks = \App\Models\Truck::orderBy('plate_number')->get();
 
-        foreach ($grouped as $plate => $items) {
-            $items = $items->sortBy('date')->values(); // ensure order
+    // 🔥 COMPUTE FUEL CONSUMPTION
+    $grouped = $allExpenses->groupBy('plate_number');
 
-            foreach ($items as $index => $curr) {
-                if ($index == 0) {
-                    // first record → walang previous
-                    $curr->start_odometer = $curr->odometer;
-                    $curr->distance = null;
-                    $curr->km_per_liter = null;
-                } else {
-                    $prev = $items[$index - 1];
+    $finalExpenses = collect();
 
-                    if (!is_null($curr->odometer) && !is_null($prev->odometer) && $curr->liters > 0) {
-                        $curr->start_odometer = $prev->odometer;
+    foreach ($grouped as $plate => $items) {
 
-                        $distance = $curr->odometer - $prev->odometer;
+        $items = $items->sortBy('date')->values();
 
-                        if ($distance > 0) {
-                            $curr->distance = $distance;
-                            $curr->km_per_liter = round($distance / $curr->liters, 2);
-                        } else {
-                            $curr->distance = null;
-                            $curr->km_per_liter = null;
-                        }
+        foreach ($items as $index => $curr) {
+
+            // Optional: only compute fuel logic for fuel rows
+            if ($curr->type !== 'fuel') {
+                $finalExpenses->push($curr);
+                continue;
+            }
+
+            if ($index == 0) {
+
+                $curr->start_odometer = $curr->odometer;
+                $curr->distance = null;
+                $curr->km_per_liter = null;
+
+            } else {
+
+                $prev = $items[$index - 1];
+
+                if (
+                    !is_null($curr->odometer) &&
+                    !is_null($prev->odometer) &&
+                    $curr->liters > 0
+                ) {
+
+                    $curr->start_odometer = $prev->odometer;
+
+                    $distance = $curr->odometer - $prev->odometer;
+
+                    if ($distance > 0) {
+                        $curr->distance = $distance;
+                        $curr->km_per_liter = round($distance / $curr->liters, 2);
                     } else {
                         $curr->distance = null;
                         $curr->km_per_liter = null;
                     }
+
+                } else {
+
+                    $curr->distance = null;
+                    $curr->km_per_liter = null;
                 }
-
-                $finalExpenses->push($curr);
             }
+
+            $finalExpenses->push($curr);
         }
-
-        $totalDistance = 0;
-        $totalLiters = 0;
-
-        foreach ($finalExpenses as $e) {
-            if (!is_null($e->distance) && $e->liters > 0) {
-                $totalDistance += $e->distance;
-                $totalLiters += $e->liters;
-            }
-        }
-
-        $avgKmPerLiter = $totalLiters > 0 ? round($totalDistance / $totalLiters, 2) : 0;
-
-        return view('owner.payroll.expenses', [
-            'expenses' => $finalExpenses, // fuel computed
-            'loadExpenses' => $loadExpenses, // load table
-            'credits' => $credits,
-            'totalDebit' => $totalDebit,
-            'totalCredit' => $totalCredit,
-            'balance' => $balance,
-            'trucks' => $trucks,
-            'avgKmPerLiter' => $avgKmPerLiter,
-        ]);
     }
+
+    // 🔥 AVG KM/L
+    $totalDistance = 0;
+    $totalLiters = 0;
+
+    foreach ($finalExpenses as $e) {
+        if (
+            $e->type === 'fuel' &&
+            !is_null($e->distance) &&
+            $e->liters > 0
+        ) {
+            $totalDistance += $e->distance;
+            $totalLiters += $e->liters;
+        }
+    }
+
+    $avgKmPerLiter = $totalLiters > 0
+        ? round($totalDistance / $totalLiters, 2)
+        : 0;
+
+    return view('owner.payroll.expenses', [
+        'expenses' => $finalExpenses,
+        'loadExpenses' => $loadExpenses,
+        'fuelExpenses' => $fuelExpenses,
+        'credits' => $credits,
+        'deductions' => $deductions, // ✅ IMPORTANT
+        'totalDebit' => $totalDebit,
+        'totalCredit' => $totalCredit,
+        'balance' => $balance,
+        'trucks' => $trucks,
+        'avgKmPerLiter' => $avgKmPerLiter,
+    ]);
+}
 
     public function storeExpense(Request $request)
     {

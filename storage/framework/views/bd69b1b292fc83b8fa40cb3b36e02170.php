@@ -207,60 +207,58 @@
                                     </thead>
 
                                     <tbody>
-<?php $__empty_1 = true; $__currentLoopData = $destinations6w; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $d): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-<tr class="position-relative">
-    <td><?php echo e($d->store_code); ?></td>
-    <td><?php echo e($d->store_name); ?></td>
-    <td><?php echo e($d->area ?? '—'); ?></td>
-    <td>
-        <span class="ui-rate-badge">
-            ₱ <?php echo e(number_format($d->rate, 2)); ?>
+                                        <?php $__empty_1 = true; $__currentLoopData = $destinations6w; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $d): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                                            <tr class="position-relative">
+                                                <td><?php echo e($d->store_code); ?></td>
+                                                <td><?php echo e($d->store_name); ?></td>
+                                                <td><?php echo e($d->area ?? '—'); ?></td>
+                                                <td>
+                                                    <span class="ui-rate-badge">
+                                                        ₱ <?php echo e(number_format($d->rate, 2)); ?>
 
-        </span>
-    </td>
-    <td>
-        <div class="d-flex gap-1 position-relative">
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex gap-1 position-relative">
 
-            
-            <button class="btn btn-sm btn-warning"
-                data-bs-toggle="modal"
-                data-bs-target="#editDestinationModal-<?php echo e($d->id); ?>">
-                ✏️
-            </button>
+                                                        
+                                                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal"
+                                                            data-bs-target="#editDestinationModal-<?php echo e($d->id); ?>">
+                                                            ✏️
+                                                        </button>
 
-            
-            <button class="btn btn-sm btn-danger"
-                data-bs-toggle="modal"
-                data-bs-target="#deleteDestinationModal"
-                data-id="<?php echo e($d->id); ?>"
-                data-name="<?php echo e($d->store_name); ?>">
-                🗑️
-            </button>
+                                                        
+                                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal"
+                                                            data-bs-target="#deleteDestinationModal"
+                                                            data-id="<?php echo e($d->id); ?>"
+                                                            data-name="<?php echo e($d->store_name); ?>">
+                                                            🗑️
+                                                        </button>
 
-            
-            <button class="btn btn-sm btn-info toggle-remarks"
-                data-id="<?php echo e($d->id); ?>">
-                &gt;
-            </button>
+                                                        
+                                                        <button class="btn btn-sm btn-info toggle-remarks"
+                                                            data-id="<?php echo e($d->id); ?>">
+                                                            &gt;
+                                                        </button>
 
-        </div>
-    </td>
-     
-    <td colspan="5" class="p-0 border-0">
-        <div class="remarks-overlay d-none" id="remarks-<?php echo e($d->id); ?>">
-            <?php echo e($d->remarks ? $d->remarks : 'No Remarks for this'); ?>
+                                                    </div>
+                                                </td>
+                                                
+                                                <td colspan="5" class="p-0 border-0">
+                                                    <div class="remarks-overlay d-none" id="remarks-<?php echo e($d->id); ?>">
+                                                        <?php echo e($d->remarks ? $d->remarks : 'No Remarks for this'); ?>
 
-        </div>
-    </td>
-</tr>
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-<tr>
-    <td colspan="5" class="text-center text-muted">
-        No destinations found.
-    </td>
-</tr>
-<?php endif; ?>
-</tbody>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">
+                                                    No destinations found.
+                                                </td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
                                 </table>
                             </div>
                         </div>
@@ -437,7 +435,7 @@
                                                             data-name="<?php echo e($d->store_name); ?>">
                                                             🗑️
                                                         </button>
-                                                          
+                                                        
                                                         <button class="btn btn-sm btn-info toggle-remarks"
                                                             data-id="<?php echo e($d->id); ?>">
                                                             &gt;
@@ -445,12 +443,12 @@
                                                     </div>
                                                 </td>
                                                 
-    <td colspan="5" class="p-0 border-0">
-        <div class="remarks-overlay d-none" id="remarks-<?php echo e($d->id); ?>">
-            <?php echo e($d->remarks ? $d->remarks : 'No Remarks for this'); ?>
+                                                <td colspan="5" class="p-0 border-0">
+                                                    <div class="remarks-overlay d-none" id="remarks-<?php echo e($d->id); ?>">
+                                                        <?php echo e($d->remarks ? $d->remarks : 'No Remarks for this'); ?>
 
-        </div>
-    </td>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                             <tr>
@@ -549,8 +547,8 @@
             </div>
         </div>
     </div>
-    
-    
+
+
     
     <div class="modal fade" id="deleteDestinationModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -592,30 +590,43 @@
 <?php $__env->startPush('scripts'); ?>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+
             const tab = <?php echo json_encode(request('tab', '6w'), 512) ?>;
             const btn = document.querySelector(`[data-bs-target="#tab-${tab}"]`);
+
             if (btn) {
                 const bsTab = new bootstrap.Tab(btn);
                 bsTab.show();
             }
-            
-           document.querySelectorAll('.toggle-remarks').forEach(btn => {
-        btn.addEventListener('click', function () {
 
-            const id = this.getAttribute('data-id');
-            const overlay = document.getElementById('remarks-' + id);
+            // REMARKS
+            document.querySelectorAll('.toggle-remarks').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    const overlay = document.getElementById('remarks-' + id);
 
-            // close others
-            document.querySelectorAll('.remarks-overlay').forEach(el => {
-                if (el !== overlay) el.classList.add('d-none');
+                    document.querySelectorAll('.remarks-overlay').forEach(el => {
+                        if (el !== overlay) el.classList.add('d-none');
+                    });
+
+                    overlay.classList.toggle('d-none');
+                });
             });
 
-            // toggle current
-            overlay.classList.toggle('d-none');
-        });
-    });
-        });
+            // DELETE DESTINATION
+            document.querySelectorAll('[data-bs-target="#deleteDestinationModal"]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    const name = this.getAttribute('data-name');
 
+                    document.getElementById('deleteDestinationName').textContent = name;
+
+                    document.getElementById('deleteDestinationForm').action =
+                        `/owner/destinations/${id}`;
+                });
+            });
+
+        });
     </script>
 <?php $__env->stopPush(); ?>
 
@@ -909,60 +920,62 @@
             border-radius: 8px;
             font-size: 13px;
         }
-        
+
         /* ===== REMARKS DRAWER ===== */
-.remarks-drawer {
-    position: fixed;
-    top: 0;
-    right: -400px;
-    width: 350px;
-    height: 100%;
-    background: #fff;
-    box-shadow: -10px 0 30px rgba(0,0,0,0.1);
-    z-index: 1055;
-    transition: right 0.3s ease;
-    padding: 20px;
-}
+        .remarks-drawer {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 350px;
+            height: 100%;
+            background: #fff;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+            z-index: 1055;
+            transition: right 0.3s ease;
+            padding: 20px;
+        }
 
-.remarks-drawer.open {
-    right: 0;
-}
+        .remarks-drawer.open {
+            right: 0;
+        }
 
-.remarks-content {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
+        .remarks-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
 
-/* ===== REMARKS OVERLAY ===== */
-.remarks-overlay {
-    position: absolute;
+        /* ===== REMARKS OVERLAY ===== */
+        .remarks-overlay {
+            position: absolute;
 
-    /* 🔥 start AFTER store code column */
-    left: 120px;   /* adjust depende sa width ng Store Code */
-    right: 80px;   /* leave space for buttons */
+            /* 🔥 start AFTER store code column */
+            left: 120px;
+            /* adjust depende sa width ng Store Code */
+            right: 80px;
+            /* leave space for buttons */
 
-    top: 50%;
-    transform: translateY(-50%);
+            top: 50%;
+            transform: translateY(-50%);
 
-    background: #22c1c3;
-    color: #fff;
-    padding: 10px 16px;
-    border-radius: 8px;
+            background: #22c1c3;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 8px;
 
-    z-index: 10;
-    text-align: center;
-    font-weight: 600;
+            z-index: 10;
+            text-align: center;
+            font-weight: 600;
 
-    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
 
-    opacity: 0;
-    transition: 0.2s ease;
-}
-.remarks-overlay:not(.d-none) {
-    opacity: 1;
-}
+            opacity: 0;
+            transition: 0.2s ease;
+        }
 
+        .remarks-overlay:not(.d-none) {
+            opacity: 1;
+        }
     </style>
 <?php $__env->stopPush(); ?>
 

@@ -20,6 +20,7 @@ use App\Http\Controllers\FlashTripController;
 use App\Http\Controllers\FlashPayrollController;
 use App\Http\Controllers\FlashPayrollPaymentController;
 use App\Http\Controllers\FlashDashboardController;
+use App\Http\Controllers\Owner\DeductionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -79,6 +80,7 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
         Route::get('/destinations', [DestinationController::class, 'index'])->name('destinations.index');
         Route::post('/destinations', [DestinationController::class, 'store'])->name('destinations.store');
         Route::put('/destinations/{destination}', [DestinationController::class, 'update'])->name('destinations.update');
+
         Route::delete('/destinations/{destination}', [DestinationController::class, 'destroy'])->name('destinations.destroy');
 
         // TRUCKS
@@ -164,9 +166,8 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
 
         Route::post('/payroll/pay', [PayrollPaymentController::class, 'store'])->name('payroll.pay');
         Route::post('/payroll/finalize', [PayrollController::class, 'finalizeWeek'])->name('payroll.finalize');
-        
-        Route::post('/payroll/expenses', [PayrollController::class, 'storeExpense'])->name('payroll.expenses.store');
 
+        Route::post('/payroll/expenses', [PayrollController::class, 'storeExpense'])->name('payroll.expenses.store');
 
         Route::post('/payroll/expenses/update', [PayrollController::class, 'updateExpense']);
         Route::post('/payroll/expenses/update-load', [PayrollController::class, 'updateLoadExpense']);
@@ -181,6 +182,16 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
         Route::post('/company-docs/save', [MaintenanceController::class, 'saveCompanyDoc'])->name('company-docs.save');
         Route::controller(PayrollController::class)->group(function () {
             Route::get('/payroll/v2/', 'index')->name('payroll.view');
+        });
+
+        Route::prefix('/payroll/deductions')->group(function () {
+            Route::get('/', [DeductionController::class, 'index'])->name('payroll.deductions.index');
+
+            Route::post('/store', [DeductionController::class, 'store'])->name('payroll.deductions.store');
+
+            Route::post('/update', [DeductionController::class, 'update'])->name('payroll.deductions.update');
+
+            Route::delete('/{id}', [DeductionController::class, 'destroy'])->name('payroll.deductions.destroy');
         });
     });
 

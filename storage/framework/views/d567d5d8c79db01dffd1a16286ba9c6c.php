@@ -433,7 +433,7 @@
 
                             <div class="modal-body">
 
-                                <label class="form-label">Trip Ticket Number</label>
+                                <label class="form-label">PVD Number</label>
                                 <input type="text" name="trip_ticket_no" class="form-control" required>
 
                             </div>

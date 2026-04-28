@@ -10,93 +10,157 @@
     <div class="row g-3 p-2">
 
         <!-- LEFT SIDE -->
-        <div class="col-lg-6">
+        <!-- LEFT SIDE -->
+        <div class="col-lg-8">
 
             <!-- HEADER -->
             <div class="ui-hero p-3 mb-3">
                 <h5 class="fw-bold mb-1">Expenses Ledger</h5>
-                <div class="text-muted small">Track fuel, credits, and balance.</div>
+                <div class="text-muted small">Track fuel, load, salaries, benefits, and balance.</div>
             </div>
 
-            <!-- DEBIT + CREDIT -->
-            <div class="row g-3 mb-3">
-                <div class="col-6">
+            @php
+                // =========================
+                // EXPENSES
+                // =========================
+                $fuelExpense = $expenses->where('type', 'fuel')->sum('debit');
+                $loadExpense = $expenses->where('type', 'load')->sum('debit');
+
+                // =========================
+                // BENEFITS = ALL DEDUCTIONS
+                // =========================
+                $benefitsExpense = collect($deductions ?? [])->sum('amount');
+
+                // =========================
+                // SALARY = ALL PASAHOD
+                // =========================
+                $salaryExpense = \Illuminate\Support\Facades\DB::table('payroll_payments')->sum('final_amount');
+
+                // =========================
+                // AVERAGE FUEL
+                // =========================
+                $avgKmPerLiter =
+                    \Illuminate\Support\Facades\DB::table('expenses')
+                        ->where('type', 'fuel')
+                        ->whereNotNull('km_per_liter')
+                        ->where('km_per_liter', '>', 0)
+                        ->avg('km_per_liter') ?? 0;
+
+                // =========================
+                // TOTAL DEBIT
+                // =========================
+                $totalDebit = $fuelExpense + $loadExpense + $benefitsExpense + $salaryExpense;
+
+                // =========================
+                // BALANCE
+                // =========================
+                $budgetBalance = $totalCredit - $totalDebit;
+            @endphp
+
+            <div class="row g-3 summary-cards-row">
+
+                <!-- Total Credit -->
+                <div class="col-md-6">
+                    <div class="card ui-card text-center h-80">
+                        <div class="card-body py-3">
+                            <div class="ui-kpi-label">Total Credit 💰</div>
+                            <div class="ui-kpi-number text-success">
+                                PHP{{ number_format($totalCredit, 2) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Debit -->
+                <div class="col-md-6">
                     <div class="card ui-card text-center h-80">
                         <div class="card-body py-3">
                             <div class="ui-kpi-label">Total Debit 💸</div>
-                            <div id="debitTotal" class="ui-kpi-number text-danger">
+                            <div class="ui-kpi-number text-danger">
                                 PHP{{ number_format($totalDebit, 2) }}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-6">
-                    <div class="card ui-card text-center h-80">
+                <!-- Total Load Expense -->
+                <div class="col-md-6">
+                    <div class="card ui-card text-center h-100">
                         <div class="card-body py-3">
-                            <div class="ui-kpi-label">Total Credit 💰</div>
-                            <div id="totalCredit" class="ui-kpi-number text-success">
-                                PHP{{ number_format($totalCredit, 2) }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- BALANCE + AVG -->
-            <div class="row g-3">
-                <div class="col-6">
-                    <div class="card ui-card text-center h-80">
-                        <div class="card-body py-3">
-                            <div class="ui-kpi-label">Balance 🏦</div>
-                            <div id="creditBalance" class="ui-kpi-number text-primary">
-                                PHP{{ number_format($balance, 2) }}
+                            <div class="ui-kpi-label">Total Load Expense 📱</div>
+                            <div class="ui-kpi-number text-info">
+                                PHP{{ number_format($loadExpense, 2) }}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-6">
-                    <div class="card ui-card text-center h-80">
+                <!-- Total Fuel Expense -->
+                <div class="col-md-6">
+                    <div class="card ui-card text-center h-100">
                         <div class="card-body py-3">
-                            <div class="ui-kpi-label">Avg Fuel ⛽</div>
+                            <div class="ui-kpi-label">Total Fuel Expense ⛽</div>
                             <div class="ui-kpi-number text-warning">
-                                {{ $avgKmPerLiter }} km/L
+                                PHP{{ number_format($fuelExpense, 2) }}
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Total Benefits Expense -->
+                <div class="col-md-6">
+                    <div class="card ui-card text-center h-100">
+                        <div class="card-body py-3">
+                            <div class="ui-kpi-label">Total Benefits Expense 🎁</div>
+                            <div class="ui-kpi-number text-primary">
+                                PHP{{ number_format($benefitsExpense, 2) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Salary Expense -->
+                <div class="col-md-6">
+                    <div class="card ui-card text-center h-100">
+                        <div class="card-body py-3">
+                            <div class="ui-kpi-label">Total Salary Expense 🧾</div>
+                            <div class="ui-kpi-number text-secondary">
+                                PHP{{ number_format($salaryExpense, 2) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Average Fuel -->
+                <div class="col-md-6">
+                    <div class="card ui-card text-center h-100">
+                        <div class="card-body py-3">
+                            <div class="ui-kpi-label">Average Fuel 🚛</div>
+                            <div class="ui-kpi-number text-dark">
+                                {{ number_format($avgKmPerLiter, 2) }} km/L
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Budget Balance -->
+                <div class="col-md-6">
+                    <div class="card ui-card text-center h-100">
+                        <div class="card-body py-3">
+                            <div class="ui-kpi-label">Budget Balance 🏦</div>
+                            <div class="ui-kpi-number {{ $budgetBalance >= 0 ? 'text-success' : 'text-danger' }}">
+                                PHP{{ number_format($budgetBalance, 2) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
         </div>
 
         <!-- RIGHT SIDE -->
-        <div class="col-lg-6 d-flex flex-column">
-
-            {{-- <!-- FILTER -->
-            <div class="d-flex justify-content-end mb-2">
-                <form method="GET" action="{{ route('owner.payroll.expenses') }}" class="d-flex gap-2">
-
-                    <select name="month" class="form-select form-select-sm">
-                        @foreach (range(1, 12) as $m)
-                            <option value="{{ $m }}"
-                                {{ request('month', now()->month) == $m ? 'selected' : '' }}>
-                                {{ Carbon::create()->month($m)->format('F') }}
-                            </option>
-                        @endforeach
-                    </select>
-
-                    <select name="year" class="form-select form-select-sm">
-                        @foreach (range(now()->year - 2, now()->year + 5) as $y)
-                            <option value="{{ $y }}" {{ request('year', now()->year) == $y ? 'selected' : '' }}>
-                                {{ $y }}
-                            </option>
-                        @endforeach
-                    </select>
-
-                    <button class="btn btn-sm btn-primary">Apply</button>
-                </form>
-            </div> --}}
+        <div class="col-lg-4 d-flex flex-column">
 
             <!-- CREDIT TABLE -->
             <div class="card ui-card border-0 flex-grow-1">
@@ -163,7 +227,7 @@
 
         </div>
 
-        <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2 mt-5">
 
             {{-- LEFT SIDE BUTTONS --}}
             <div class="d-flex gap-2 flex-wrap">
@@ -841,6 +905,377 @@
         </div>
     </div>
 
+
+
+
+    {{-- =========================
+   GOVERNMENT DEDUCTIONS
+   SHOW ONLY PLATES WITH RECORDS
+========================= --}}
+    @php
+        $deductionGroups = collect($deductions ?? [])->groupBy('plate_number');
+    @endphp
+
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h6 class="fw-bold mb-0">Government Benefits Deductions 🧾</h6>
+                <small class="text-muted">SSS, PAG-IBIG, PhilHealth payment records per plate</small>
+            </div>
+
+            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addDeductionModal">
+                + Add Deduction
+            </button>
+        </div>
+
+        <div class="card-body">
+
+            @forelse($deductionGroups as $plate => $records)
+
+                @php
+                    $sss = $records->where('deduction_type', 'sss')->sortByDesc('date_paid')->first();
+                    $pagibig = $records->where('deduction_type', 'pagibig')->sortByDesc('date_paid')->first();
+                    $philhealth = $records->where('deduction_type', 'philhealth')->sortByDesc('date_paid')->first();
+                @endphp
+
+                <div class="mb-4 border rounded-4 p-3 shadow-sm">
+
+                    <h6 class="fw-bold text-primary mb-3">
+                        Plate #: {{ $plate }}
+                    </h6>
+
+                    {{-- =========================
+   CENTERED DEDUCTIONS TABLE
+========================= --}}
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-center align-middle">SSS</th>
+                                    <th class="text-center align-middle">PAG-IBIG</th>
+                                    <th class="text-center align-middle">PhilHealth</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <tr>
+
+                                    {{-- SSS --}}
+                                    <td class="text-center align-middle">
+                                        @if ($sss)
+                                            <div class="fw-semibold mb-1">
+                                                Date: {{ $sss->date_paid }}
+                                            </div>
+
+                                            <div class="fw-bold mb-2">
+                                                PHP{{ number_format($sss->amount, 2) }}
+                                            </div>
+
+                                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+
+                                                @if ($sss->receipt_image)
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary view-receipt-btn"
+                                                        data-image="{{ asset('storage/' . $sss->receipt_image) }}">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                @endif
+
+                                                <button class="btn btn-sm btn-primary edit-deduction-btn"
+                                                    data-id="{{ $sss->id }}" data-plate="{{ $sss->plate_number }}"
+                                                    data-type="{{ $sss->deduction_type }}"
+                                                    data-date="{{ $sss->date_paid }}" data-amount="{{ $sss->amount }}"
+                                                    data-remarks="{{ $sss->remarks }}"
+                                                    data-image="{{ $sss->receipt_image ? asset('storage/' . $sss->receipt_image) : '' }}"
+                                                    data-bs-toggle="modal" data-bs-target="#editDeductionModal">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+
+                                                <button class="btn btn-sm btn-outline-danger delete-deduction-btn"
+                                                    data-id="{{ $sss->id }}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+
+                                            </div>
+                                        @else
+                                            <span class="text-muted">No payment yet</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- PAGIBIG --}}
+                                    <td class="text-center align-middle">
+                                        @if ($pagibig)
+                                            <div class="fw-semibold mb-1">
+                                                Date: {{ $pagibig->date_paid }}
+                                            </div>
+
+                                            <div class="fw-bold mb-2">
+                                                PHP{{ number_format($pagibig->amount, 2) }}
+                                            </div>
+
+                                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+
+                                                @if ($pagibig->receipt_image)
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary view-receipt-btn"
+                                                        data-image="{{ asset('storage/' . $pagibig->receipt_image) }}">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                @endif
+
+                                                <button class="btn btn-sm btn-primary edit-deduction-btn"
+                                                    data-id="{{ $pagibig->id }}"
+                                                    data-plate="{{ $pagibig->plate_number }}"
+                                                    data-type="{{ $pagibig->deduction_type }}"
+                                                    data-date="{{ $pagibig->date_paid }}"
+                                                    data-amount="{{ $pagibig->amount }}"
+                                                    data-remarks="{{ $pagibig->remarks }}"
+                                                    data-image="{{ $pagibig->receipt_image ? asset('storage/' . $pagibig->receipt_image) : '' }}"
+                                                    data-bs-toggle="modal" data-bs-target="#editDeductionModal">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+
+                                                <button class="btn btn-sm btn-outline-danger delete-deduction-btn"
+                                                    data-id="{{ $pagibig->id }}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+
+                                            </div>
+                                        @else
+                                            <span class="text-muted">No payment yet</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- PHILHEALTH --}}
+                                    <td class="text-center align-middle">
+                                        @if ($philhealth)
+                                            <div class="fw-semibold mb-1">
+                                                Date: {{ $philhealth->date_paid }}
+                                            </div>
+
+                                            <div class="fw-bold mb-2">
+                                                PHP{{ number_format($philhealth->amount, 2) }}
+                                            </div>
+
+                                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+
+                                                @if ($philhealth->receipt_image)
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary view-receipt-btn"
+                                                        data-image="{{ asset('storage/' . $philhealth->receipt_image) }}">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                @endif
+
+                                                <button class="btn btn-sm btn-primary edit-deduction-btn"
+                                                    data-id="{{ $philhealth->id }}"
+                                                    data-plate="{{ $philhealth->plate_number }}"
+                                                    data-type="{{ $philhealth->deduction_type }}"
+                                                    data-date="{{ $philhealth->date_paid }}"
+                                                    data-amount="{{ $philhealth->amount }}"
+                                                    data-remarks="{{ $philhealth->remarks }}"
+                                                    data-image="{{ $philhealth->receipt_image ? asset('storage/' . $philhealth->receipt_image) : '' }}"
+                                                    data-bs-toggle="modal" data-bs-target="#editDeductionModal">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+
+                                                <button class="btn btn-sm btn-outline-danger delete-deduction-btn"
+                                                    data-id="{{ $philhealth->id }}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+
+                                            </div>
+                                        @else
+                                            <span class="text-muted">No payment yet</span>
+                                        @endif
+                                    </td>
+
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            @empty
+                <div class="text-center py-4 text-muted">
+                    No deductions recorded yet.
+                </div>
+            @endforelse
+
+        </div>
+    </div>
+
+
+    {{-- =========================
+   ADD DEDUCTION MODAL
+========================= --}}
+    <div class="modal fade" id="addDeductionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Deduction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="deductionForm" enctype="multipart/form-data">
+                        @csrf
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label class="form-label">Plate Number</label>
+                                <select name="plate_number" class="form-select" required>
+                                    <option value="">Select Plate</option>
+                                    @foreach ($trucks as $truck)
+                                        <option value="{{ $truck->plate_number }}">
+                                            {{ $truck->plate_number }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Deduction Type</label>
+                                <select name="deduction_type" class="form-select" required>
+                                    <option value="">Select Type</option>
+                                    <option value="sss">SSS</option>
+                                    <option value="pagibig">PAG-IBIG</option>
+                                    <option value="philhealth">PhilHealth</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Date Paid</label>
+                                <input type="date" name="date_paid" class="form-control" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Amount</label>
+                                <input type="number" step="0.01" name="amount" class="form-control" required>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Receipt Image</label>
+                                <input type="file" name="receipt_image" class="form-control">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Remarks</label>
+                                <input type="text" name="remarks" class="form-control">
+                            </div>
+
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="saveDeductionBtn" class="btn btn-success">
+                        Save Deduction
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {{-- =========================
+   EDIT DEDUCTION MODAL
+   PLACE THIS BELOW ADD DEDUCTION MODAL
+========================= --}}
+    <div class="modal fade" id="editDeductionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Deduction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="editDeductionForm" enctype="multipart/form-data">
+                        @csrf
+
+                        <input type="hidden" id="editDeductionId" name="id">
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label class="form-label">Plate Number</label>
+                                <select id="editDeductionPlate" name="plate_number" class="form-select" required>
+                                    @foreach ($trucks as $truck)
+                                        <option value="{{ $truck->plate_number }}">
+                                            {{ $truck->plate_number }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Deduction Type</label>
+                                <select id="editDeductionType" name="deduction_type" class="form-select" required>
+                                    <option value="sss">SSS</option>
+                                    <option value="pagibig">PAG-IBIG</option>
+                                    <option value="philhealth">PhilHealth</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Date Paid</label>
+                                <input type="date" id="editDeductionDate" name="date_paid" class="form-control"
+                                    required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Amount</label>
+                                <input type="number" step="0.01" id="editDeductionAmount" name="amount"
+                                    class="form-control" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Upload New Receipt</label>
+                                <input type="file" id="editDeductionReceipt" name="receipt_image"
+                                    class="form-control">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label d-block">Current Receipt</label>
+
+                                <button type="button" id="viewCurrentDeductionReceiptBtn"
+                                    class="btn btn-outline-primary btn-sm d-none view-receipt-btn">
+                                    <i class="bi bi-eye"></i> View Current Receipt
+                                </button>
+
+                                <span id="noCurrentDeductionReceipt" class="text-muted small">
+                                    No receipt uploaded
+                                </span>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Remarks</label>
+                                <input type="text" id="editDeductionRemarks" name="remarks" class="form-control">
+                            </div>
+
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="updateDeductionBtn" class="btn btn-primary">
+                        Update Deduction
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
     <div class="modal fade" id="viewReceiptModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
@@ -1423,6 +1858,175 @@
                             }
                         });
                 });
+            });
+
+            // =============================
+            // DEDUCTIONS (PUT THIS NEAR SAVE CREDIT / SAVE EXPENSE)
+            // IMPORTANT:
+            // Place this INSIDE document.addEventListener('DOMContentLoaded', function() { ... })
+            // BEFORE INIT section
+            // =============================
+
+            // SAVE DEDUCTION
+            const saveDeductionBtn = document.getElementById('saveDeductionBtn');
+
+            if (saveDeductionBtn) {
+                saveDeductionBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    const form = document.getElementById('deductionForm');
+
+                    if (!form) return;
+
+                    const formData = new FormData(form);
+                    const token = form.querySelector('input[name="_token"]').value;
+
+                    fetch('/owner/payroll/deductions/store', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+
+                            if (!data.success) {
+                                return showAlert(data.message || 'Failed to save deduction', 'error');
+                            }
+
+                            showAlert('Deduction added successfully!', 'success');
+
+                            closeModal('addDeductionModal');
+
+                            setTimeout(function() {
+                                location.reload();
+                            }, 700);
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            showAlert('Something went wrong while saving deduction.', 'error');
+                        });
+                });
+            }
+
+
+            // DELETE DEDUCTION
+            document.querySelectorAll('.delete-deduction-btn').forEach(function(btn) {
+
+                btn.addEventListener('click', function() {
+
+                    const id = this.dataset.id;
+
+                    if (!id) return;
+
+                    if (!confirm('Delete this deduction record?')) return;
+
+                    fetch('/owner/payroll/deductions/' + id, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector(
+                                    'meta[name="csrf-token"]').content,
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+
+                            if (!data.success) {
+                                return showAlert(data.message || 'Delete failed', 'error');
+                            }
+
+                            showAlert('Deduction deleted successfully!', 'success');
+
+                            setTimeout(function() {
+                                location.reload();
+                            }, 700);
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            showAlert('Something went wrong while deleting.', 'error');
+                        });
+
+                });
+
+            });
+
+
+            // ======================
+            // EDIT DEDUCTION
+            // PLACE INSIDE DOMContentLoaded
+            // ======================
+            const viewDeductionBtn = document.getElementById('viewCurrentDeductionReceiptBtn');
+            const noDeductionReceipt = document.getElementById('noCurrentDeductionReceipt');
+
+            document.querySelectorAll('.edit-deduction-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+
+                    document.getElementById('editDeductionId').value = this.dataset.id || '';
+                    document.getElementById('editDeductionPlate').value = this.dataset.plate || '';
+                    document.getElementById('editDeductionType').value = this.dataset.type || '';
+                    document.getElementById('editDeductionDate').value = this.dataset.date || '';
+                    document.getElementById('editDeductionAmount').value = this.dataset.amount ||
+                        '';
+                    document.getElementById('editDeductionRemarks').value = this.dataset.remarks ||
+                        '';
+
+                    const image = this.dataset.image || '';
+
+                    if (image) {
+                        viewDeductionBtn.classList.remove('d-none');
+                        noDeductionReceipt.classList.add('d-none');
+                        viewDeductionBtn.dataset.image = image;
+                    } else {
+                        viewDeductionBtn.classList.add('d-none');
+                        noDeductionReceipt.classList.remove('d-none');
+                        viewDeductionBtn.dataset.image = '';
+                    }
+                });
+            });
+
+
+            // ======================
+            // UPDATE DEDUCTION
+            // ======================
+            document.getElementById('updateDeductionBtn')?.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                const form = document.getElementById('editDeductionForm');
+
+                if (!form) return;
+
+                const formData = new FormData(form);
+
+                fetch('/owner/payroll/deductions/update', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+
+                        if (!data.success) {
+                            return showAlert(data.message || 'Failed to update deduction', 'error');
+                        }
+
+                        showAlert('Deduction updated successfully!', 'success');
+
+                        closeModal('editDeductionModal');
+
+                        setTimeout(() => {
+                            location.reload();
+                        }, 700);
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showAlert('Something went wrong while updating deduction.', 'error');
+                    });
             });
 
             // ======================
@@ -2030,24 +2634,143 @@
 
         }
 
-        .ui-kpi-number {
-            font-size: 20px;
-            font-weight: 800;
-            line-height: 1;
-            /* eto ang nagtatanggal ng extra space */
-            margin-top: 2px;
-            margin-bottom: -2px;
-            /* bawas lower space */
+        /* ===== COMPACT SUMMARY CARDS ===== */
+
+        /* KPI SECTION ONLY */
+        .row.g-3 {
+            --bs-gutter-x: .35rem !important;
+            /* horizontal dikit */
+            --bs-gutter-y: .35rem !important;
+            /* vertical dikit */
         }
 
+        /* card mismo */
+        .ui-card {
+            margin-bottom: 0 !important;
+            border-radius: 14px;
+        }
+
+        /* optional: bawas side padding ng columns */
+        .row.g-3>[class*="col-"] {
+            padding-right: .2rem;
+            padding-left: .2rem;
+        }
+
+        /* mobile tighter */
+        @media (max-width: 768px) {
+            .row.g-3 {
+                --bs-gutter-x: .3rem !important;
+                --bs-gutter-y: .3rem !important;
+            }
+
+            .row.g-3>[class*="col-"] {
+                padding-right: .15rem;
+                padding-left: .15rem;
+            }
+        }
+
+
+        /* ===== FIXED SUMMARY CARD SPACING (BALANCED) ===== */
+
+        .ui-card .card-body {
+            padding: .9rem .9rem .8rem !important;
+            min-height: 92px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        /* title */
         .ui-kpi-label {
-            font-size: 14px;
-            /* mas malaki */
+            font-size: 13px;
             font-weight: 700;
-            /* mas kapal */
-            color: #4b5563;
-            margin-bottom: 10px;
-            /* maliit lang gap */
+            color: #6b7280;
+            line-height: 1.25;
+            margin-top: 2px;
+            margin-bottom: 18px;
+            /* enough gap */
+        }
+
+        /* amount */
+        .ui-kpi-number {
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1;
+            margin-top: 0;
+            /* remove auto push */
+            transform: translateY(0);
+            /* remove extra baba */
+            letter-spacing: -.02em;
+        }
+
+        /* average fuel */
+        .ui-kpi-number.text-dark {
+            font-size: 21px;
+        }
+
+        /* mobile */
+        @media (max-width: 768px) {
+            .ui-card .card-body {
+                min-height: 82px;
+                padding: .75rem .65rem !important;
+            }
+
+            .ui-kpi-label {
+                font-size: 11px;
+                margin-bottom: 12px;
+            }
+
+            .ui-kpi-number {
+                font-size: 18px;
+            }
+
+            .ui-kpi-number.text-dark {
+                font-size: 17px;
+            }
+        }
+
+        /* mismong card */
+        .ui-card {
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(16, 24, 40, .06);
+        }
+
+        /* bawas hover para di masyadong tumalon */
+        .ui-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(16, 24, 40, .08);
+        }
+
+
+        /* hero header bawas din */
+        .ui-hero {
+            padding: .9rem 1rem !important;
+            margin-bottom: .75rem !important;
+            border-radius: 16px;
+        }
+
+        .ui-hero h5 {
+            font-size: 18px;
+            margin-bottom: 2px !important;
+        }
+
+        .ui-hero .small {
+            font-size: 12px;
+        }
+
+        /* mobile */
+        @media (max-width: 768px) {
+            .ui-kpi-number {
+                font-size: 15px;
+            }
+
+            .ui-kpi-label {
+                font-size: 11px;
+            }
+
+            .ui-card .card-body {
+                padding: .65rem .6rem !important;
+            }
         }
 
         /* QUEUE HEADER */

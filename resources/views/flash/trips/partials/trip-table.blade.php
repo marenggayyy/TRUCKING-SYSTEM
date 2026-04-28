@@ -84,7 +84,7 @@
         <table class="table ui-table align-middle mb-0 w-full" style="min-width:600px;">
             <thead>
                 <tr>
-                    <th><a class="table-sort" href="{{ $sortUrl('trip_ticket_no') }}">Trip Ticket No <i class="{{ $sortIcon('trip_ticket_no') }}"></i></a></th>
+                    <th><a class="table-sort" href="{{ $sortUrl('trip_ticket_no') }}">PVD Number <i class="{{ $sortIcon('trip_ticket_no') }}"></i></a></th>
                     <th><a class="table-sort" href="{{ $sortUrl('dispatch_date') }}">Date <i class="{{ $sortIcon('dispatch_date') }}"></i></a></th>
                     <th>Destination</th>
                     <th>Truck</th>

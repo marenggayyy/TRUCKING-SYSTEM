@@ -125,7 +125,7 @@
 
                             <thead>
                                 <tr>
-                                    <th>Trip Ticket</th>
+                                    <th>PVD Number</th>
                                     <th>Date</th>
                                     <th>Destination</th>
                                     <th>Truck</th>
