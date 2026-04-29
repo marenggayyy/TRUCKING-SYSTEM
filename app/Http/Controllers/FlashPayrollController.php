@@ -8,6 +8,8 @@ use App\Models\Driver;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PayrollReadyMail;
 
 class FlashPayrollController extends Controller
 {

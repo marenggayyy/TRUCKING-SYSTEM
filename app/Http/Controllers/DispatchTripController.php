@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use Mail;
+use Illuminate\Support\Facades\Mail;
 use App\Mail\TripAssignedMail;
 
 class DispatchTripController extends Controller
@@ -30,10 +30,16 @@ class DispatchTripController extends Controller
 
         $driver = Driver::find($trip->driver_id);
 
-        Mail::to($driver->email)->send(new TripAssignedMail($trip, $driver));
+        $company = 'Chamonix';
+
+        if ($driver && $driver->email) {
+            Mail::to($driver->email)->send(new TripAssignedMail($trip, $driver, $company));
+        }
 
         foreach ($trip->helpers as $helper) {
-            Mail::to($helper->email)->send(new TripAssignedMail($trip, $helper));
+            if ($helper->email) {
+                Mail::to($helper->email)->send(new TripAssignedMail($trip, $helper, $company));
+            }
         }
 
         return back()->with('success', 'Trip assigned and email sent.');

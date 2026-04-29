@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use App\Models\FlashTrip;
 use App\Models\FlashPayrollPayment;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PayrollReadyMail;
+use App\Models\Driver;
+use Carbon\Carbon;
 
 class FlashPayrollPaymentController extends Controller
 {
@@ -86,6 +90,53 @@ class FlashPayrollPaymentController extends Controller
                 $trip->update(['payment_status' => 'Paid']);
             }
         });
+
+        $company = 'Flash Express';
+
+        $person = Driver::find($data['person_id']);
+
+        if ($person && $person->email) {
+            $paymentTrips = FlashTrip::with(['destination'])
+                ->where('driver_id', $person->id)
+                ->where('status', 'Completed')
+                ->whereBetween('dispatch_date', [$data['week_start'], $data['week_end']])
+                ->get();
+
+            $rows = collect();
+
+            foreach ($paymentTrips as $trip) {
+                $amount = 500; // Flash fixed rate
+                $allowance = 0;
+
+                $rows->push([
+                    'date' => Carbon::parse($trip->dispatch_date)->format('Y-m-d'),
+                    'location' => $trip->destination->area ?? '-',
+                    'amount' => $amount,
+                    'allowance' => $allowance,
+                    'incentive' => 0,
+                    'total_salary' => $amount + $allowance,
+                ]);
+            }
+
+            $amount = $rows->sum('total_salary');
+
+            Mail::to($person->email)->send(
+                new PayrollReadyMail(
+                    $person,
+                    $rows,
+                    $amount,
+                    $data['week_start'],
+                    $data['week_end'],
+                    $company,
+
+                    // DEDUCTIONS
+                    (float) ($data['balance_advance'] ?? 0),
+                    (float) ($data['advance_deducted'] ?? 0),
+                    (float) max(($data['balance_advance'] ?? 0) - ($data['advance_deducted'] ?? 0), 0),
+                    (float) max($amount - ($data['advance_deducted'] ?? 0), 0),
+                ),
+            );
+        }
 
         return back()->with('success', 'Flash payroll paid!');
     }

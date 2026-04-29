@@ -8,6 +8,8 @@ use App\Models\FlashDestination;
 use App\Models\Truck;
 use App\Models\Driver;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TripAssignedMail;
 
 class FlashTripController extends Controller
 {
@@ -55,7 +57,7 @@ class FlashTripController extends Controller
 
     public function assign($id)
     {
-        $trip = FlashTrip::findOrFail($id);
+        $trip = FlashTrip::with(['destination', 'truck', 'driver'])->findOrFail($id);
 
         if ($trip->status !== 'Draft') {
             return back()->with('error', 'Invalid status.');
@@ -66,9 +68,14 @@ class FlashTripController extends Controller
             'assigned_at' => now(),
         ]);
 
-        return back()->with('success', 'Trip assigned.');
-    }
+        $company = 'Flash Express';
 
+        if ($trip->driver && $trip->driver->email) {
+            Mail::to($trip->driver->email)->send(new TripAssignedMail($trip, $trip->driver, $company));
+        }
+
+        return back()->with('success', 'Trip assigned and email sent.');
+    }
     public function dispatch(Request $request, $id)
     {
         $request->validate([

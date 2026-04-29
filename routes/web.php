@@ -344,4 +344,14 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary', 'flash.layout'])
         Route::post('/payroll/finalize', [FlashPayrollController::class, 'finalize'])->name('payroll.finalize');
     });
 
+
+
+Route::get('/test-email', function () {
+    Mail::raw('Laravel Gmail SMTP is working!', function ($message) {
+        $message->to('marichelleevangelista4@gmail.com')->subject('Test Email');
+    });
+
+    return 'Email Sent!';
+});
+
 require __DIR__ . '/auth.php';

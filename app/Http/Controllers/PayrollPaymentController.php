@@ -9,6 +9,14 @@ use App\Models\PayrollPersonLedger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PayrollReadyMail;
+use App\Models\Driver;
+use App\Models\Helper;
+use Carbon\Carbon;
+use App\Http\Controllers\FlashPayrollController;
+use App\Http\Controllers\PayrollController;
+use App\Models\AllowanceRange;
 
 class PayrollPaymentController extends Controller
 {
@@ -155,6 +163,108 @@ class PayrollPaymentController extends Controller
                 $this->updateTripPaymentStatus($trip);
             }
         });
+
+        $company = 'Monde de Parfum Logistics Services';
+
+        if ($data['person_type'] === 'driver') {
+            $person = Driver::find($data['person_id']);
+        } else {
+            $person = Helper::find($data['person_id']);
+        }
+
+        if ($person && $person->email) {
+            $paymentTrips = DispatchTrip::with(['destination', 'helpers'])
+                ->where('status', 'Completed')
+                ->whereBetween('dispatch_date', [$data['week_start'], $data['week_end']])
+                ->get();
+
+            $rows = collect();
+
+            foreach ($paymentTrips as $trip) {
+                // DRIVER
+                if ($data['person_type'] === 'driver' && $trip->driver_id == $person->id) {
+                    $rate = (float) ($trip->rate_snapshot ?? 0);
+                    $helperCount = $trip->helpers->count();
+                    $driverRatePercent = $helperCount >= 2 ? 0.1 : 0.12;
+
+                    $amount = $trip->manual_amount ?? round($rate * $driverRatePercent, 2);
+
+                    $computedAllowance = 0;
+
+                    if ($rate > 0) {
+                        $range = AllowanceRange::where('rate_from', '<=', $rate)->where('rate_to', '>=', $rate)->first();
+
+                        $computedAllowance = $range ? (float) $range->allowance : 0;
+                    }
+
+                    $allowance = $trip->manual_allowance ?? $computedAllowance;
+
+                    $rows->push([
+                        'date' => Carbon::parse($trip->dispatch_date)->format('Y-m-d'),
+                        'location' => $trip->destination->store_name ?? '-',
+                        'amount' => $amount,
+                        'allowance' => $allowance,
+                        'incentive' => 0,
+                        'total_salary' => $amount + $allowance,
+                    ]);
+                }
+
+                // HELPER
+                if ($data['person_type'] === 'helper') {
+                    foreach ($trip->helpers as $helper) {
+                        if ($helper->id == $person->id) {
+                            $rate = (float) ($trip->rate_snapshot ?? 0);
+                            $helperCount = $trip->helpers->count();
+
+                            $helperPool = $trip->manual_amount ?? $rate * 0.1;
+                            $helperBase = $helperCount > 0 ? $helperPool / $helperCount : 0;
+
+                            // SAME LOGIC AS PDF
+                            $computedAllowance = 0;
+
+                            if ($rate > 0) {
+                                $range = AllowanceRange::where('rate_from', '<=', $rate)->where('rate_to', '>=', $rate)->first();
+
+                                $computedAllowance = $range ? (float) $range->allowance : 0;
+                            }
+
+                            // Manual allowance = full trip allowance pool
+                            $allowancePool = $trip->manual_allowance ?? $computedAllowance;
+
+                            // Split among helpers
+                            $splitAllowance = $helperCount > 0 ? $allowancePool / $helperCount : 0;
+                            $rows->push([
+                                'date' => Carbon::parse($trip->dispatch_date)->format('Y-m-d'),
+                                'location' => $trip->destination->store_name ?? '-',
+                                'amount' => round($helperBase, 2),
+                                'allowance' => round($splitAllowance, 2),
+                                'incentive' => 0,
+                                'total_salary' => round($helperBase + $splitAllowance, 2),
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            $amount = $rows->sum('total_salary');
+
+            Mail::to($person->email)->send(
+                new PayrollReadyMail(
+                    $person,
+                    $rows,
+                    $amount,
+                    $data['week_start'],
+                    $data['week_end'],
+                    $company,
+
+                    // DEDUCTIONS
+                    (float) ($data['balance_advance'] ?? 0), // Last Balance
+                    (float) ($data['advance_deducted'] ?? 0), // Deducted
+                    (float) max(($data['balance_advance'] ?? 0) - ($data['advance_deducted'] ?? 0), 0), // Remaining
+                    (float) max($amount - ($data['advance_deducted'] ?? 0), 0), // Net Pay
+                ),
+            );
+        }
 
         return back()->with('success', 'Payment recorded successfully.');
     }
