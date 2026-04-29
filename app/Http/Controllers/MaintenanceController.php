@@ -8,6 +8,7 @@ use App\Models\TruckDocument;
 use App\Models\CompanyDocument;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
+use App\Models\PersonalVehicle;
 
 class MaintenanceController extends Controller
 {
@@ -63,6 +64,40 @@ class MaintenanceController extends Controller
             });
 
         // =========================
+        // PERSONAL VEHICLES
+        // =========================
+        $personalVehicles = PersonalVehicle::with(['documents'])
+            ->get()
+            ->map(function ($car) use ($today) {
+                foreach (['ORCR', 'INSURANCE', 'PMS'] as $type) {
+                    $doc = $car->documents->where('type', $type)->first();
+
+                    if ($doc && $doc->expiry_date) {
+                        $expiry = Carbon::parse($doc->expiry_date)->startOfDay();
+                        $reminder = $doc->reminder_days ?? 30;
+
+                        if ($expiry->lt($today)) {
+                            $doc->status = 'EXPIRED';
+                        } else {
+                            $days = $today->diffInDays($expiry);
+
+                            if ($days <= $reminder) {
+                                $doc->status = 'EXPIRING';
+                            } else {
+                                $doc->status = 'ACTIVE';
+                            }
+                        }
+                    }
+
+                    $car->{strtolower($type)} = $doc;
+                }
+
+                $car->ltfrb = null;
+
+                return $car;
+            });
+
+        // =========================
         // COMPANY DOCUMENTS
         // =========================
         $companyDocsRaw = CompanyDocument::all();
@@ -104,7 +139,22 @@ class MaintenanceController extends Controller
         // PMS (simple count)
         $pmsDueCount = collect($trucks)->map(fn($truck) => $truck->pms)->filter(fn($doc) => $doc && $doc->status !== 'ACTIVE')->count();
         // =========================
-        return view('owner.reports.maintenance', compact('trucks', 'expiringDocs', 'expiredDocs', 'companyDocs', 'totalTrucks', 'expiringCount', 'expiredCount', 'pmsDueCount'));
+        return view('owner.reports.maintenance', compact('trucks', 'personalVehicles', 'expiringDocs', 'expiredDocs', 'companyDocs', 'totalTrucks', 'expiringCount', 'expiredCount', 'pmsDueCount'));
+    }
+
+    public function storePersonalVehicle(Request $request)
+    {
+        $request->validate([
+            'plate_number' => 'required|string|max:255|unique:personal_vehicles,plate_number',
+            'vehicle_name' => 'nullable|string|max:255',
+        ]);
+
+        PersonalVehicle::create([
+            'plate_number' => strtoupper($request->plate_number),
+            'vehicle_name' => $request->vehicle_name,
+        ]);
+
+        return back()->with('success', 'Personal vehicle added successfully');
     }
 
     public function save(Request $request)
@@ -181,6 +231,26 @@ class MaintenanceController extends Controller
         return back()->with('success', 'Documents updated successfully');
     }
 
+    public function deletePersonalVehicle($id)
+    {
+        $vehicle = PersonalVehicle::findOrFail($id);
+
+        // delete related files + docs
+        $docs = TruckDocument::where('personal_vehicle_id', $id)->get();
+
+        foreach ($docs as $doc) {
+            if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
+                Storage::disk('public')->delete($doc->file_path);
+            }
+
+            $doc->delete();
+        }
+
+        $vehicle->delete();
+
+        return back()->with('success', 'Personal vehicle deleted successfully');
+    }
+
     public function saveCompanyDoc(Request $request)
     {
         $doc = CompanyDocument::firstOrNew([
@@ -242,5 +312,68 @@ class MaintenanceController extends Controller
         }
 
         return back()->with('success', 'Company document updated');
+    }
+
+    public function savePersonalVehicle(Request $request)
+    {
+        $vehicleId = $request->personal_vehicle_id;
+
+        $types = ['ORCR', 'INSURANCE', 'PMS'];
+
+        foreach ($types as $type) {
+            $expiry = $request->input($type . '_expiry');
+            $file = $request->file($type . '_file');
+
+            $deleteExpiry = $request->has('delete_' . $type . '_expiry');
+            $deleteFile = $request->has('delete_' . $type . '_file');
+
+            $doc = TruckDocument::firstOrNew([
+                'personal_vehicle_id' => $vehicleId,
+                'type' => $type,
+            ]);
+
+            // DELETE EXPIRY
+            if ($deleteExpiry) {
+                $doc->expiry_date = null;
+            } elseif ($expiry) {
+                $doc->expiry_date = $expiry;
+            }
+
+            // DELETE FILE
+            if ($deleteFile) {
+                if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
+                    Storage::disk('public')->delete($doc->file_path);
+                }
+
+                $doc->file_path = null;
+                $doc->file_name = null;
+                $doc->file_type = null;
+                $doc->file_size = null;
+            }
+
+            // UPLOAD FILE
+            if ($file) {
+                if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
+                    Storage::disk('public')->delete($doc->file_path);
+                }
+
+                $path = $file->store("documents/personal/$vehicleId", 'public');
+
+                $doc->file_path = $path;
+                $doc->file_name = $file->getClientOriginalName();
+                $doc->file_type = $file->getClientOriginalExtension();
+                $doc->file_size = $file->getSize();
+            }
+
+            if ($doc->expiry_date || $doc->file_path) {
+                $doc->save();
+            } else {
+                if ($doc->exists) {
+                    $doc->delete();
+                }
+            }
+        }
+
+        return back()->with('success', 'Personal vehicle documents updated successfully');
     }
 }

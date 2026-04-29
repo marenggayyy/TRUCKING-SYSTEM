@@ -12,4 +12,9 @@ class TruckDocument extends Model
     {
         return $this->belongsTo(Truck::class);
     }
+
+    public function personalVehicle()
+    {
+        return $this->belongsTo(PersonalVehicle::class, 'personal_vehicle_id');
+    }
 }

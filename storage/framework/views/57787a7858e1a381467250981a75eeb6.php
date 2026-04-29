@@ -102,6 +102,7 @@
                     <ul class="sub-nav collapse <?php echo e($operationsOpen ? 'show' : ''); ?>" id="sidebar-operations"
                         data-bs-parent="#sidebar-menu">
 
+                        
                         <li class="nav-item">
                             <a class="nav-link <?php echo e(request()->routeIs('owner.trips.*') ? 'active' : ''); ?>"
                                 href="<?php echo e(route('owner.trips.index')); ?>">

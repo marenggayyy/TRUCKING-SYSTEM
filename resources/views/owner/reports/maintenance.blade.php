@@ -102,69 +102,71 @@
                 🚛 Truck Documents
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-bordered mb-0">
-                    <thead class="text-center">
-                        <tr>
-                            <th>Plate No</th>
-                            <th>ORCR</th>
-                            <th>Insurance</th>
-                            <th>LTFRB</th>
-                            <th>PMS</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @forelse($trucks ?? [] as $truck)
+            <div class="card-body p-3">
+                <div class="table-responsive table-card-wrap">
+                    <table class="table table-bordered mb-0">
+                        <thead class="text-center">
                             <tr>
-                                <td class="fw-bold">{{ $truck->plate_number }}</td>
-
-                                {{-- ORCR --}}
-                                <td class="text-center">
-                                    @include('partials.doc-status', ['doc' => $truck->orcr])
-                                </td>
-
-                                {{-- INSURANCE --}}
-                                <td class="text-center">
-                                    @include('partials.doc-status', ['doc' => $truck->insurance])
-                                </td>
-
-                                {{-- LTFRB --}}
-                                <td class="text-center">
-                                    @include('partials.doc-status', ['doc' => $truck->ltfrb])
-                                </td>
-
-                                {{-- PMS --}}
-                                <td class="text-center">
-                                    @include('partials.doc-status', ['doc' => $truck->pms])
-                                </td>
-
-                                <td class="text-center">
-                                    <button class="btn btn-sm btn-primary edit-btn" data-bs-toggle="modal"
-                                        data-bs-target="#editModal" data-truck-id="{{ $truck->id }}"
-                                        data-plate="{{ $truck->plate_number }}"
-                                        data-orcr="{{ optional($truck->orcr)->expiry_date }}"
-                                        data-insurance="{{ optional($truck->insurance)->expiry_date }}"
-                                        data-ltfrb="{{ optional($truck->ltfrb)->expiry_date }}"
-                                        data-pms="{{ optional($truck->pms)->expiry_date }}"
-                                        data-orcr-file="{{ optional($truck->orcr)->file_path }}"
-                                        data-insurance-file="{{ optional($truck->insurance)->file_path }}"
-                                        data-ltfrb-file="{{ optional($truck->ltfrb)->file_path }}"
-                                        data-pms-file="{{ optional($truck->pms)->file_path }}">
-                                        ✏
-                                    </button>
-                                </td>
+                                <th>Plate No</th>
+                                <th>ORCR</th>
+                                <th>Insurance</th>
+                                <th>LTFRB</th>
+                                <th>PMS</th>
+                                <th>Actions</th>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">
-                                    No trucks found
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+
+                        <tbody>
+                            @forelse($trucks ?? [] as $truck)
+                                <tr>
+                                    <td class="fw-bold">{{ $truck->plate_number }}</td>
+
+                                    {{-- ORCR --}}
+                                    <td class="text-center">
+                                        @include('partials.doc-status', ['doc' => $truck->orcr])
+                                    </td>
+
+                                    {{-- INSURANCE --}}
+                                    <td class="text-center">
+                                        @include('partials.doc-status', ['doc' => $truck->insurance])
+                                    </td>
+
+                                    {{-- LTFRB --}}
+                                    <td class="text-center">
+                                        @include('partials.doc-status', ['doc' => $truck->ltfrb])
+                                    </td>
+
+                                    {{-- PMS --}}
+                                    <td class="text-center">
+                                        @include('partials.doc-status', ['doc' => $truck->pms])
+                                    </td>
+
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-primary edit-btn" data-bs-toggle="modal"
+                                            data-bs-target="#editModal" data-truck-id="{{ $truck->id }}"
+                                            data-plate="{{ $truck->plate_number }}"
+                                            data-orcr="{{ optional($truck->orcr)->expiry_date }}"
+                                            data-insurance="{{ optional($truck->insurance)->expiry_date }}"
+                                            data-ltfrb="{{ optional($truck->ltfrb)->expiry_date }}"
+                                            data-pms="{{ optional($truck->pms)->expiry_date }}"
+                                            data-orcr-file="{{ optional($truck->orcr)->file_path }}"
+                                            data-insurance-file="{{ optional($truck->insurance)->file_path }}"
+                                            data-ltfrb-file="{{ optional($truck->ltfrb)->file_path }}"
+                                            data-pms-file="{{ optional($truck->pms)->file_path }}">
+                                            ✏
+                                        </button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">
+                                        No trucks found
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -283,7 +285,98 @@
             </div>
         </div>
 
+        {{-- PERSONAL CAR DOCUMENTS --}}
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center fw-bold">
+                <span>🚗 Personal Car Documents</span>
+
+                <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addPersonalVehicleModal">
+                    ➕ Add Personal Car
+                </button>
+            </div>
+
+            <div class="card-body p-3">
+                <div class="table-responsive table-card-wrap">
+                    <table class="table table-bordered mb-0">
+                        <thead class="text-center">
+                            <tr>
+                                <th>Plate No</th>
+                                <th>ORCR</th>
+                                <th>Insurance</th>
+                                <th>LTFRB</th>
+                                <th>PMS</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @forelse($personalVehicles ?? [] as $car)
+                                <tr>
+                                    <td class="fw-bold">{{ $car->plate_number }}</td>
+
+                                    <td class="text-center">
+                                        @include('partials.doc-status', ['doc' => $car->orcr])
+                                    </td>
+
+                                    <td class="text-center">
+                                        @include('partials.doc-status', ['doc' => $car->insurance])
+                                    </td>
+
+                                    <td class="text-center text-muted">
+                                        N/A
+                                    </td>
+
+                                    <td class="text-center">
+                                        @include('partials.doc-status', ['doc' => $car->pms])
+                                    </td>
+
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center gap-1">
+
+                                            {{-- EDIT --}}
+                                            <button class="btn btn-sm btn-primary personal-edit-btn"
+                                                data-bs-toggle="modal" data-bs-target="#personalModal"
+                                                data-id="{{ $car->id }}" data-plate="{{ $car->plate_number }}"
+                                                data-orcr="{{ optional($car->orcr)->expiry_date }}"
+                                                data-insurance="{{ optional($car->insurance)->expiry_date }}"
+                                                data-pms="{{ optional($car->pms)->expiry_date }}"
+                                                data-orcr-file="{{ optional($car->orcr)->file_path }}"
+                                                data-insurance-file="{{ optional($car->insurance)->file_path }}"
+                                                data-pms-file="{{ optional($car->pms)->file_path }}">
+                                                ✏
+                                            </button>
+
+                                            {{-- DELETE --}}
+                                            <form action="{{ route('owner.personal-vehicles.delete', $car->id) }}"
+                                                method="POST"
+                                                onsubmit="return confirm('Delete this personal vehicle and all documents?')"
+                                                class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    🗑
+                                                </button>
+                                            </form>
+
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">
+                                        No personal vehicles found
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
+
+
 
     <div class="modal fade" id="editModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -478,6 +571,128 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="personalModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+
+                <form method="POST" action="{{ route('owner.personal-vehicle-docs.save') }}"
+                    enctype="multipart/form-data">
+                    @csrf
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Personal Vehicle Documents</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <input type="hidden" name="personal_vehicle_id" id="personalVehicleId">
+
+                        <div class="mb-3">
+                            <label class="fw-bold">Plate Number</label>
+                            <input type="text" id="personalPlate" class="form-control" readonly>
+                        </div>
+
+                        <hr>
+
+                        @foreach (['ORCR', 'INSURANCE', 'PMS'] as $type)
+                            <h6 class="fw-bold">{{ $type }}</h6>
+
+                            <div id="{{ strtolower($type) }}PersonalPreview" class="mt-2"></div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label>Expiry Date</label>
+                                    <input type="date" name="{{ $type }}_expiry"
+                                        id="{{ strtolower($type) }}PersonalInput" class="form-control">
+
+                                    <div class="form-check mt-1">
+                                        <input type="checkbox" name="delete_{{ $type }}_expiry" value="1"
+                                            class="form-check-input">
+                                        <label class="form-check-label text-danger">
+                                            Delete Expiry Date
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label>Upload File</label>
+                                    <input type="file" name="{{ $type }}_file" class="form-control">
+
+                                    <div class="form-check mt-1">
+                                        <input type="checkbox" name="delete_{{ $type }}_file" value="1"
+                                            class="form-check-input">
+                                        <label class="form-check-label text-danger">
+                                            Delete File
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+                        <button class="btn btn-primary">
+                            Save
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addPersonalVehicleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <form method="POST" action="{{ route('owner.personal-vehicles.store') }}">
+                    @csrf
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Personal Vehicle</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="mb-3">
+                            <label class="fw-bold">Plate Number</label>
+                            <input type="text" name="plate_number" class="form-control" placeholder="e.g. ABC1234"
+                                style="text-transform: uppercase;" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="fw-bold">Vehicle Name (Optional)</label>
+                            <input type="text" name="vehicle_name" class="form-control"
+                                placeholder="e.g. Toyota Vios">
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="submit" class="btn btn-success">
+                            Add Vehicle
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+
 @endsection
 
 @push('styles')
@@ -499,6 +714,33 @@
         .modal-body {
             max-height: 70vh;
             overflow-y: auto;
+        }
+
+        .table-card-wrap {
+            border-radius: 14px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .table-card-wrap table {
+            margin-bottom: 0;
+        }
+
+        .table-card-wrap th {
+            background: #f8fafc;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .table-card-wrap th,
+        .table-card-wrap td {
+            vertical-align: middle;
+            padding: 14px 12px;
+        }
+
+        .table-card-wrap tbody tr:hover {
+            background: #f8fafc;
+            transition: 0.2s ease;
         }
     </style>
 @endpush
@@ -536,14 +778,34 @@
             if (companyBtn) {
 
                 document.getElementById('companyType').value = companyBtn.dataset.type;
-                document.getElementById('companyTitle').innerText = companyBtn.dataset.type;
+                document.getElementById('companyTitle').innerText =
+                    companyBtn.dataset.type.replaceAll('_', ' ');
 
                 document.getElementById('companyExpiry').value = formatDate(companyBtn.dataset.expiry);
 
                 setPreview('companyPreview', companyBtn.dataset.file);
             }
 
+
+            const personalBtn = e.target.closest('.personal-edit-btn');
+
+            if (personalBtn) {
+
+                document.getElementById('personalVehicleId').value = personalBtn.dataset.id;
+                document.getElementById('personalPlate').value = personalBtn.dataset.plate;
+
+                document.getElementById('orcrPersonalInput').value = formatDate(personalBtn.dataset.orcr);
+                document.getElementById('insurancePersonalInput').value = formatDate(personalBtn.dataset.insurance);
+                document.getElementById('pmsPersonalInput').value = formatDate(personalBtn.dataset.pms);
+
+                setPreview('orcrPersonalPreview', personalBtn.dataset.orcrFile);
+                setPreview('insurancePersonalPreview', personalBtn.dataset.insuranceFile);
+                setPreview('pmsPersonalPreview', personalBtn.dataset.pmsFile);
+            }
+
         });
+
+
 
         function hasFile(filePath) {
             return filePath &&

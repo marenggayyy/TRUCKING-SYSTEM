@@ -102,6 +102,7 @@
                     <ul class="sub-nav collapse {{ $operationsOpen ? 'show' : '' }}" id="sidebar-operations"
                         data-bs-parent="#sidebar-menu">
 
+                        
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('owner.trips.*') ? 'active' : '' }}"
                                 href="{{ route('owner.trips.index') }}">

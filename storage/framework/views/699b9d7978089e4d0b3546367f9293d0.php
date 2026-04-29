@@ -49,7 +49,7 @@
                 // =========================
                 // TOTAL DEBIT
                 // =========================
-                $totalDebit = $fuelExpense + $loadExpense + $benefitsExpense + $salaryExpense;
+                $totalDebit = $fuelExpense + $loadExpense + $benefitsExpense;
 
                 // =========================
                 // BALANCE

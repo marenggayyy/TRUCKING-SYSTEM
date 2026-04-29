@@ -109,7 +109,7 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
 | TRIPS (ADMIN CAN ACCESS)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:owner,it,admin'])
+Route::middleware(['auth', 'role:owner,it,admin,secretary'])
     ->prefix('owner')
     ->name('owner.')
     ->group(function () {
@@ -206,6 +206,9 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary'])
     ->group(function () {
         Route::get('/reports/maintenance', [MaintenanceController::class, 'index'])->name('reports.maintenance');
         Route::post('/maintenance/save', [MaintenanceController::class, 'save'])->name('maintenance.save');
+        Route::post('/personal-vehicle-docs/save', [MaintenanceController::class, 'savePersonalVehicle'])->name('personal-vehicle-docs.save');
+        Route::post('/personal-vehicles/store', [MaintenanceController::class, 'storePersonalVehicle'])->name('personal-vehicles.store');
+        Route::delete('/personal-vehicles/{id}', [MaintenanceController::class, 'deletePersonalVehicle'])->name('personal-vehicles.delete');
     });
 
 // web.php
@@ -299,7 +302,7 @@ Route::middleware(['auth', 'role:owner,it,admin,secretary', 'flash.layout'])
 | TRIPS (ADMIN CAN ACCESS)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:owner,it,admin', 'flash.layout'])
+Route::middleware(['auth', 'role:owner,it,admin,secretary', 'flash.layout'])
     ->prefix('flash')
     ->name('flash.')
     ->group(function () {
