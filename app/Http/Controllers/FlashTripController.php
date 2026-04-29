@@ -145,11 +145,6 @@ class FlashTripController extends Controller
     {
         $trip = FlashTrip::findOrFail($id);
 
-        // Optional: prevent delete if completed
-        if ($trip->status === 'Completed') {
-            return back()->with('error', 'Completed trips cannot be deleted.');
-        }
-
         $trip->delete();
 
         return back()->with('success', 'Trip deleted successfully.');
